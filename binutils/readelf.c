@@ -157,6 +157,7 @@
 #include "elf/sh.h"
 #include "elf/sparc.h"
 #include "elf/spu.h"
+#include "elf/tdm.h"
 #include "elf/tic6x.h"
 #include "elf/tilegx.h"
 #include "elf/tilepro.h"
@@ -1324,6 +1325,7 @@ guess_is_rela (unsigned int e_machine)
     case EM_PPC64:
     case EM_PPC:
     case EM_TI_PRU:
+    case EM_TDM:
     case EM_RISCV:
     case EM_RL78:
     case EM_RX:
@@ -2668,6 +2670,10 @@ dump_relocations (Filedata *          filedata,
 	  rtype = elf_pru_reloc_type (type);
 	  break;
 
+	case EM_TDM:
+	  rtype = elf_tdm_reloc_type (type);
+	  break;
+
 	case EM_NFP:
 	  if (EF_NFP_MACH (filedata->file_header.e_flags) == E_NFP_MACH_3200)
 	    rtype = elf_nfp3200_reloc_type (type);
@@ -3836,6 +3842,7 @@ get_machine_name (unsigned e_machine)
     case EM_NIOS32:		return "Altera Nios";
     case EM_CYGNUS_MEP:         return "Toshiba MeP Media Engine";
     case EM_ADAPTEVA_EPIPHANY:	return "Adapteva EPIPHANY";
+    case EM_TDM:		return "The Disintegrated Machine";
     case EM_CYGNUS_FRV:		return "Fujitsu FR-V";
     case EM_S12Z:               return "Freescale S12Z";
 
@@ -16100,6 +16107,8 @@ is_32bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 1; /* R_PPC_ADDR32.  */
     case EM_TI_PRU:
       return reloc_type == 11; /* R_PRU_BFD_RELOC_32.  */
+    case EM_TDM:
+      return reloc_type == 2; /* R_TDM_32.  */
     case EM_RISCV:
       return (reloc_type == 1 /* R_RISCV_32.  */
 	      || reloc_type == 56); /* R_RISCV_SET32.  */
@@ -16415,6 +16424,8 @@ is_16bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 55; /* R_RISCV_SET16.  */
     case EM_TI_PRU:
       return reloc_type == 8; /* R_PRU_BFD_RELOC_16.  */
+    case EM_TDM:
+      return reloc_type == 1; /* R_TDM_16.  */
     case EM_TI_C6000:
       return reloc_type == 2; /* R_C6000_ABS16.  */
     case EM_VISIUM:
@@ -16669,6 +16680,7 @@ is_none_reloc (Filedata * filedata, unsigned int reloc_type)
     case EM_MIPS:    /* R_MIPS_NONE.  */
     case EM_MN10300: /* R_MN10300_NONE.  */
     case EM_MOXIE:   /* R_MOXIE_NONE.  */
+    case EM_TDM:     /* R_TDM_NONE.  */
     case EM_NIOS32:  /* R_NIOS_NONE.  */
     case EM_OR1K:    /* R_OR1K_NONE. */
     case EM_PARISC:  /* R_PARISC_NONE.  */

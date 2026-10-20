@@ -82,6 +82,7 @@ extern int print_insn_pj		(bfd_vma, disassemble_info *);
 extern int print_insn_pru		(bfd_vma, disassemble_info *);
 extern int print_insn_s390		(bfd_vma, disassemble_info *);
 extern int print_insn_spu		(bfd_vma, disassemble_info *);
+extern int print_insn_tdm		(bfd_vma, disassemble_info *);
 extern int print_insn_tic30		(bfd_vma, disassemble_info *);
 extern int print_insn_tic4x		(bfd_vma, disassemble_info *);
 extern int print_insn_tic54x		(bfd_vma, disassemble_info *);

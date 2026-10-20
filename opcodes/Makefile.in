@@ -647,6 +647,8 @@ TARGET32_LIBOPCODES_CFILES = \
 	sparc-opc.c \
 	spu-dis.c \
 	spu-opc.c \
+	tdm-dis.c \
+	tdm-opc.c \
 	tic30-dis.c \
 	tic4x-dis.c \
 	tic54x-dis.c \
@@ -1032,6 +1034,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sparc-opc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spu-dis.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spu-opc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tdm-dis.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tdm-opc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tic30-dis.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tic4x-dis.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tic54x-dis.Plo@am__quote@

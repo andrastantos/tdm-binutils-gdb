@@ -450,6 +450,9 @@
 
 #define EM_MICROBLAZE_OLD	0xbaab	/* Old MicroBlaze */
 
+/* The Disintegrated Machine (TDM).  Unofficial value.  */
+#define EM_TDM			0x5444
+
 #define EM_ADAPTEVA_EPIPHANY	0x1223  /* Adapteva's Epiphany architecture.  */
 
 /* Old constant that might be in use by some software. */

@@ -340,6 +340,8 @@ DESCRIPTION
 .#define bfd_mach_n1h_v3	4
 .#define bfd_mach_n1h_v3m	5
 .  bfd_arch_ns32k,     {* National Semiconductors ns32000.  *}
+.  bfd_arch_tdm,       {* The Disintegrated Machine.  *}
+.#define bfd_mach_tdm		1
 .  bfd_arch_tic30,     {* Texas Instruments TMS320C30.  *}
 .  bfd_arch_tic4x,     {* Texas Instruments TMS320C3X/4X.  *}
 .#define bfd_mach_tic3x		30
@@ -709,6 +711,7 @@ extern const bfd_arch_info_type bfd_score_arch;
 extern const bfd_arch_info_type bfd_sh_arch;
 extern const bfd_arch_info_type bfd_sparc_arch;
 extern const bfd_arch_info_type bfd_spu_arch;
+extern const bfd_arch_info_type bfd_tdm_arch;
 extern const bfd_arch_info_type bfd_tic30_arch;
 extern const bfd_arch_info_type bfd_tic4x_arch;
 extern const bfd_arch_info_type bfd_tic54x_arch;
@@ -795,6 +798,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_sh_arch,
     &bfd_sparc_arch,
     &bfd_spu_arch,
+    &bfd_tdm_arch,
     &bfd_tic30_arch,
     &bfd_tic4x_arch,
     &bfd_tic54x_arch,

@@ -618,6 +618,7 @@ do
     sparc_elf64_sol2_vec)	 tb="$tb elf64-sparc.lo elf64.lo $elfxx_sparc elf-solaris2.lo"; target_size=64 ;;
     spu_elf32_vec)		 tb="$tb elf32-spu.lo elf32.lo $elf" ;;
     sym_vec)			 tb="$tb xsym.lo" ;;
+    tdm_elf32_vec)		 tb="$tb elf32-tdm.lo elf32.lo $elf" ;;
     tic30_coff_vec)		 tb="$tb coff-tic30.lo $coffgen" ;;
     tic4x_coff0_vec)		 tb="$tb coff-tic4x.lo $coffgen" ;;
     tic4x_coff0_beh_vec)	 tb="$tb coff-tic4x.lo $coffgen" ;;

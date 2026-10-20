@@ -1,5 +1,10 @@
 -*- text -*-
 
+Changes in 2.47:
+
+* Add support for TDM (The Disintegrated Machine), a word addressed 16-bit
+  processor.
+
 Changes in 2.46:
 
 * Add support for AMD Zen6 processor.

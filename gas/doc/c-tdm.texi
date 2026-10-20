@@ -1,0 +1,195 @@
+@c Copyright (C) 2026 Free Software Foundation, Inc.
+@c This is part of the GAS manual.
+@c For copying conditions, see the file as.texinfo.
+@ifset GENERIC
+@page
+@node TDM-Dependent
+@chapter TDM Dependent Features
+@end ifset
+
+@cindex TDM support
+@cindex The Disintegrated Machine support
+TDM (The Disintegrated Machine) is a 16-bit, word addressed processor
+with four registers and a single 16-bit instruction format.
+
+@menu
+* TDM Syntax::               Syntax
+* TDM Word Addressing::      Word Addressing
+* TDM Opcodes::              Opcodes
+* TDM Relocations::          Relocations
+@end menu
+
+@node TDM Syntax
+@section Syntax
+@menu
+* TDM Chars::                Special Characters
+* TDM Registers::            Register Names
+* TDM Operands::             Operands
+@end menu
+
+@node TDM Chars
+@subsection Special Characters
+
+@cindex line comment character, TDM
+@cindex TDM line comment character
+@samp{;} starts a comment anywhere on a line.  @samp{#} starts a comment
+at the beginning of a line.  There is no statement separator character.
+
+@node TDM Registers
+@subsection Register Names
+
+@cindex TDM registers
+@cindex register names, TDM
+The registers are @code{$pc}, @code{$sp}, @code{$r0} and @code{$r1}.
+Register names are not case sensitive.  @samp{$} can't appear in symbol
+names.
+
+@node TDM Operands
+@subsection Operands
+
+@cindex TDM operands
+@cindex TDM addressing modes
+Every instruction has a register operand and, except for the single
+operand instructions, a second operand that is either a memory reference
+or an immediate:
+
+@table @code
+@item [$pc+@var{e}]
+@itemx [$sp+@var{e}]
+@itemx [$r0+@var{e}]
+@itemx [@var{e}]
+The memory location at a register plus @var{e}, or at @var{e}.
+
+@item $pc+@var{e}
+@itemx $sp+@var{e}
+@itemx $r0+@var{e}
+@itemx @var{e}
+The value of a register plus @var{e}, or @var{e} itself.
+@end table
+
+@var{e} is a signed 6-bit value, @minus{}32 to 31.  Addresses wrap
+around at 16 bits, so @code{0xffe0} to @code{0xffff} are accepted as
+@minus{}32 to @minus{}1, which makes the top of the address space
+directly reachable.  After a base register @var{e} may be omitted; if
+present, it has to start with @samp{+} or @samp{-}.  @code{$r1} can't
+be used as a base register.
+
+@code{$pc} holds the address of the current instruction while the
+operand is computed, so a PC-relative reference to @var{label} is
+written as @code{[$pc + (@var{label} - .)]}.
+
+The order of the operands selects the destination:
+
+@smallexample
+add     $r0, [$sp+1]    ; $r0 = $r0 + mem[$sp+1]
+add     [$sp+1], $r0    ; mem[$sp+1] = mem[$sp+1] + $r0
+@end smallexample
+
+@node TDM Word Addressing
+@section Word Addressing
+
+@cindex TDM word addressing
+@cindex word addressing, TDM
+The smallest addressable unit on TDM is a 16-bit word.  @code{.}, symbol
+values, section sizes and all directive arguments that count bytes count
+16-bit words:
+
+@itemize @bullet
+@item
+@code{.byte}, @code{.short}, @code{.hword} and @code{.word} emit one
+word per value; @code{.long} and @code{.int} emit two words, low word
+first.
+
+@item
+@code{.space}, @code{.skip} and @code{.zero} reserve words.
+
+@item
+@code{.align}, @code{.balign}, @code{.balignw} and @code{.p2align}
+align to a number of words.
+
+@item
+@code{.ascii}, @code{.asciz} and @code{.string} pack two characters per
+word, the first character in the low octet, and pad the last word with
+a zero octet if needed.
+@end itemize
+
+Object files store 16-bit words in little endian octet order.  As with
+other ELF targets whose byte is wider than 8 bits, section and segment
+headers hold octet addresses, which is what @command{readelf} shows;
+@command{objdump} and @command{ld} use word addresses.
+
+DWARF debug information (@option{-g}) is not supported.
+
+@node TDM Opcodes
+@section Opcodes
+
+@cindex TDM opcodes
+@cindex opcodes for TDM
+The instruction set follows the reference assembler of the TDM project.
+In the descriptions below @var{reg} is a register and @var{opb} is any
+second operand; @var{mem} has to be a memory reference.
+
+@table @code
+@item or
+@itemx and
+@itemx xor
+@itemx add
+@itemx mov
+@code{@var{op} @var{reg}, @var{opb}} or @code{@var{op} [@var{mem}], @var{reg}}.
+The first operand is the destination.
+
+@item sub
+@itemx isub
+@code{sub} computes first operand minus second, @code{isub} second
+minus first, in either operand order.  The first operand is the
+destination.  With the memory operand first the assembler uses the other
+opcode: @code{sub [@var{mem}], @var{reg}} is encoded as an @code{isub}
+with a memory destination, and vice versa.
+
+@item swap
+@itemx swapi
+@code{swap @var{reg}, [@var{mem}]} exchanges a register and a memory
+location; the operands may be written in either order.  @code{swapi}
+also flips the interrupt disable bit.  Swapping two registers isn't
+supported.
+
+@item if_eq
+@itemx if_neq
+@itemx if_ltu
+@itemx if_geu
+@itemx if_lts
+@itemx if_ges
+@itemx if_les
+@itemx if_gts
+Execute the next instruction only if the condition holds between the
+first and the second operand (@samp{u} is unsigned, @samp{s} signed),
+otherwise skip it.  With the memory operand first the assembler encodes
+the mirrored condition (@code{if_lts [@var{mem}], @var{reg}} becomes
+@code{if_gts @var{reg}, [@var{mem}]}).  There are no unsigned @samp{<=}
+or @samp{>} conditions, so @code{if_ltu} and @code{if_geu} require the
+register operand first.
+
+@item istat
+@itemx ror
+@itemx rol
+@code{@var{op} @var{reg}} or @code{@var{op} [@var{mem}]}.  @code{istat}
+stores the interrupt status, @code{ror} and @code{rol} rotate by one bit.
+@end table
+
+@node TDM Relocations
+@section Relocations
+
+@cindex TDM relocations
+@cindex relocations, TDM
+@table @code
+@item R_TDM_16
+@itemx R_TDM_32
+16- and 32-bit data, emitted by @code{.word} and @code{.long}.
+@item R_TDM_IMM6
+The 6-bit immediate field of an instruction, with the same 16-bit wrap
+around as above.
+@item R_TDM_PCREL6
+The 6-bit immediate field, relative to the address of the instruction.
+@code{[$pc + (@var{label} - .)]} produces this relocation when
+@var{label} is in another section or file.
+@end table
