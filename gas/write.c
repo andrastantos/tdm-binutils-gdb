@@ -1039,8 +1039,13 @@ fixup_segment (fixS *fixP, segT this_segment)
 		   && !TC_FORCE_RELOCATION_SUB_LOCAL (fixP, add_symbol_segment))
 	    {
 	      add_number -= S_GET_VALUE_WHERE (fixP->fx_subsy, fixP->fx_file, fixP->fx_line);
+	      /* fx_dot_value is in target bytes (or octets in a
+		 SEC_OCTETS section), fr_address always in octets.  */
 	      fixP->fx_offset = (add_number + fixP->fx_dot_value
-				 + fixP->fx_dot_frag->fr_address);
+				 + ((this_segment->flags & SEC_OCTETS)
+				    ? fixP->fx_dot_frag->fr_address
+				    : (fixP->fx_dot_frag->fr_address
+				       / OCTETS_PER_BYTE)));
 
 	      /* Make it pc-relative.  If the back-end code has not
 		 selected a pc-relative reloc, cancel the adjustment
