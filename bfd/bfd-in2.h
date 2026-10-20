@@ -1584,6 +1584,8 @@ enum bfd_architecture
 #define bfd_mach_n1h_v3        4
 #define bfd_mach_n1h_v3m       5
   bfd_arch_ns32k,     /* National Semiconductors ns32000.  */
+  bfd_arch_tdm,       /* The Disintegrated Machine.  */
+#define bfd_mach_tdm           1
   bfd_arch_tic30,     /* Texas Instruments TMS320C30.  */
   bfd_arch_tic4x,     /* Texas Instruments TMS320C3X/4X.  */
 #define bfd_mach_tic3x         30
@@ -3808,6 +3810,11 @@ enum bfd_reloc_code_real
   BFD_RELOC_FT32_SC1,
   BFD_RELOC_FT32_15,
   BFD_RELOC_FT32_DIFF32,
+
+  /* TDM relocations: the signed 6-bit IMMED field of an instruction,
+     absolute or relative to the address of the instruction.  */
+  BFD_RELOC_TDM_IMM6,
+  BFD_RELOC_TDM_PCREL6,
 
   /* Fujitsu Frv Relocations.  */
   BFD_RELOC_FRV_LABEL16,

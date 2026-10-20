@@ -8386,6 +8386,9 @@ subject, see the hardware manufacturer's manual.
 @ifset SPARC
 * Sparc-Dependent::             SPARC Dependent Features
 @end ifset
+@ifset TDM
+* TDM-Dependent::               TDM Dependent Features
+@end ifset
 @ifset TIC54X
 * TIC54X-Dependent::            TI TMS320C54x Dependent Features
 @end ifset
@@ -8634,6 +8637,10 @@ family.
 
 @ifset SPARC
 @include c-sparc.texi
+@end ifset
+
+@ifset TDM
+@include c-tdm.texi
 @end ifset
 
 @ifset TIC54X

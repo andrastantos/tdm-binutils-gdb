@@ -88,6 +88,7 @@ CPU_DOCS = \
 	%D%/c-score.texi \
 	%D%/c-sh.texi \
 	%D%/c-sparc.texi \
+	%D%/c-tdm.texi \
 	%D%/c-tic54x.texi \
 	%D%/c-tic6x.texi \
 	%D%/c-tilegx.texi \

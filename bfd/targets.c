@@ -897,6 +897,7 @@ extern const bfd_target sparc_elf64_fbsd_vec;
 extern const bfd_target sparc_elf64_sol2_vec;
 extern const bfd_target spu_elf32_vec;
 extern const bfd_target sym_vec;
+extern const bfd_target tdm_elf32_vec;
 extern const bfd_target tic30_coff_vec;
 extern const bfd_target tic4x_coff0_vec;
 extern const bfd_target tic4x_coff0_beh_vec;
@@ -1306,6 +1307,8 @@ static const bfd_target * const _bfd_target_vector[] =
 	&spu_elf32_vec,
 
 	&sym_vec,
+
+	&tdm_elf32_vec,
 
 	&tic30_coff_vec,
 	&tic54x_coff0_beh_vec,

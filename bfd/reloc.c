@@ -2188,6 +2188,14 @@ ENUMDOC
   FT32 ELF relocations.
 
 ENUM
+  BFD_RELOC_TDM_IMM6
+ENUMX
+  BFD_RELOC_TDM_PCREL6
+ENUMDOC
+  TDM relocations: the signed 6-bit IMMED field of an instruction,
+  absolute or relative to the address of the instruction.
+
+ENUM
   BFD_RELOC_FRV_LABEL16
 ENUMX
   BFD_RELOC_FRV_LABEL24
