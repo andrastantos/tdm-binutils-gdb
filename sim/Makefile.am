@@ -193,6 +193,9 @@ endif
 if SIM_ENABLE_ARCH_sh
 include sh/local.mk
 endif
+if SIM_ENABLE_ARCH_tdm
+include tdm/local.mk
+endif
 if SIM_ENABLE_ARCH_v850
 include v850/local.mk
 endif

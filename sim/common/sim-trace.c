@@ -891,7 +891,9 @@ dis_read (bfd_vma memaddr, bfd_byte *myaddr, unsigned int length,
 	  struct disassemble_info *dinfo)
 {
   SIM_CPU *cpu = dinfo->application_data;
-  sim_core_read_buffer (CPU_STATE (cpu), cpu, NULL_CIA, myaddr, memaddr, length);
+  /* MEMADDR is in target bytes, the sim core in octets.  */
+  sim_core_read_buffer (CPU_STATE (cpu), cpu, NULL_CIA, myaddr,
+			memaddr * dinfo->octets_per_byte, length);
   return 0;
 }
 
@@ -938,6 +940,7 @@ trace_disasm (SIM_DESC sd, sim_cpu *cpu, address_word addr)
       info->read_memory_func = dis_read;
       info->arch = bfd_get_arch (bfd);
       info->mach = bfd_get_mach (bfd);
+      info->octets_per_byte = bfd_octets_per_byte (bfd, NULL);
       disassemble_init_for_target (info);
     }
 

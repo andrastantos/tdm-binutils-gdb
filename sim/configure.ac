@@ -124,6 +124,7 @@ if test "${enable_sim}" != no; then
       [[rx-*-*], [rx]],
       [[sh*-*-*], [sh]],
       [[sparc-*-*], [erc32]],
+      [[tdm-*-*], [tdm]],
       [[v850*-*-*], [v850]],
     ])
   done

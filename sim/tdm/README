@@ -1,0 +1,45 @@
+TDM (The Disintegrated Machine) simulator
+=========================================
+
+An instruction set simulator for TDM, following the RTL model of the TDM
+project (rtl/cpu.py): 5 clock cycles per instruction, 6 for SWAP, every
+memory operand read and then written back.  It runs ELF programs from
+their entry point (the reset vector at MEM[0] isn't used):
+
+  tdm-elf-run [--trace-disasm] program
+
+The CPU model includes the parts that are on the CPU in the hardware:
+
+  0xfffe  interrupt controller
+          read:  enable mask in bits 15..8, pending sources in 7..0
+          write: bits 15..8 set the enable mask, a 1 in bits 7..0
+                 acknowledges that source
+          Source 0 is the MMU's access violation, 1..7 are external.
+  0xffff  MMU control register (write only; reads see 0xffff)
+          offset in bits 15..9, limit in 8..2 (in 512-word pages, the
+          limit is inclusive), user mode in 1; a 1 in bit 0 clears the
+          access violation.
+
+Everything else goes to the bus.  By default there's 16K words of memory
+(0x0000..0x3fff) and the tdm_stdio device at 0xffe0..0xffe2:
+
+  0xffe0  EXIT    write: stop, the value is the exit status
+  0xffe1  STDOUT  write: print the low 8 bits
+  0xffe2  STDIN   read: the next character, 0xffff at end of file
+
+Writes with bit 15 set are ignored and reads return 0x8000 (except for
+STDIN), so the write-back after a read does nothing.  Accessing an
+address nothing decodes stops the simulation with SIGSEGV.
+
+Devices are configured through the hw device tree, and --hw-device
+settings take precedence over the defaults.  The sim core is octet
+addressed: addresses and sizes given to --hw-device and the --memory-*
+options are twice the TDM word address.
+
+  --memory-region 0,0x20000                    64K words of memory
+  --hw-device "/core/tdm_stdio/reg 0x1ffd0 6"  stdio device at 0xffe8
+  --hw-device "/core/tdm_stdio/disabled true"  no stdio device
+
+External interrupt lines are the input ports int1..int7 of /tdm_cpu:
+
+  --hw-device "/some/device > irq int3 /tdm_cpu"
