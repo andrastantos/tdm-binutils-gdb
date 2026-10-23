@@ -32,6 +32,7 @@
 #include "sim-main.h"
 #include "sim-signal.h"
 #include "opcode/tdm.h"
+#include "sim/sim-tdm.h"
 
 #include "tdm-sim.h"
 
@@ -332,29 +333,74 @@ tdm_set_irq_line (SIM_CPU *cpu, int line, int level)
     tc->ext_irq &= ~bit;
 }
 
+/* Registers, as numbered in sim/sim-tdm.h.  */
+
 static int
 tdm_reg_fetch (SIM_CPU *cpu, int rn, void *buf, int length)
 {
+  struct tdm_sim_cpu *tc = TDM_SIM_CPU (cpu);
   unsigned char *p = buf;
-  uint16_t value;
+  uint64_t value;
+  int size = rn == TDM_SIM_CYCLES_REGNUM ? 8 : 2;
+  int i;
 
-  if (rn < 0 || rn >= TDM_NUM_REGS || length != 2)
+  if (length != size)
     return 0;
-  value = TDM_SIM_CPU (cpu)->regs[rn];
-  p[0] = value;
-  p[1] = value >> 8;
-  return 2;
+  switch (rn)
+    {
+    case TDM_SIM_PC_REGNUM:
+    case TDM_SIM_SP_REGNUM:
+    case TDM_SIM_R0_REGNUM:
+    case TDM_SIM_R1_REGNUM:	   value = tc->regs[rn]; break;
+    case TDM_SIM_INTDIS_REGNUM:	   value = tc->intdis; break;
+    case TDM_SIM_MMU_OFFSET_REGNUM: value = tc->mmu_offset; break;
+    case TDM_SIM_MMU_LIMIT_REGNUM:  value = tc->mmu_limit; break;
+    case TDM_SIM_MMU_USER_REGNUM:   value = tc->mmu_user; break;
+    case TDM_SIM_MMU_AV_REGNUM:	   value = tc->av; break;
+    case TDM_SIM_INT_ENABLE_REGNUM: value = tc->ic_enable; break;
+    case TDM_SIM_INT_PENDING_REGNUM: value = tc->ic_pending; break;
+    case TDM_SIM_CYCLES_REGNUM:	   value = tc->cycles; break;
+    default:
+      return 0;
+    }
+  for (i = 0; i < size; i++)
+    p[i] = value >> (8 * i);
+  return size;
 }
 
 static int
 tdm_reg_store (SIM_CPU *cpu, int rn, const void *buf, int length)
 {
+  struct tdm_sim_cpu *tc = TDM_SIM_CPU (cpu);
   const unsigned char *p = buf;
+  uint64_t value = 0;
+  int size = rn == TDM_SIM_CYCLES_REGNUM ? 8 : 2;
+  int i;
 
-  if (rn < 0 || rn >= TDM_NUM_REGS || length != 2)
+  if (length != size)
     return 0;
-  TDM_SIM_CPU (cpu)->regs[rn] = p[0] | (p[1] << 8);
-  return 2;
+  for (i = size - 1; i >= 0; i--)
+    value = (value << 8) | p[i];
+  switch (rn)
+    {
+    case TDM_SIM_PC_REGNUM:
+    case TDM_SIM_SP_REGNUM:
+    case TDM_SIM_R0_REGNUM:
+    case TDM_SIM_R1_REGNUM:	   tc->regs[rn] = value; break;
+    /* A debugger write takes effect right away, for the interrupt check
+       as well.  */
+    case TDM_SIM_INTDIS_REGNUM:	   tc->intdis = tc->intdis_irq = value & 1; break;
+    case TDM_SIM_MMU_OFFSET_REGNUM: tc->mmu_offset = value & 0x7f; break;
+    case TDM_SIM_MMU_LIMIT_REGNUM:  tc->mmu_limit = value & 0x7f; break;
+    case TDM_SIM_MMU_USER_REGNUM:   tc->mmu_user = value & 1; break;
+    case TDM_SIM_MMU_AV_REGNUM:	   tc->av = value & 1; break;
+    case TDM_SIM_INT_ENABLE_REGNUM: tc->ic_enable = value; break;
+    case TDM_SIM_INT_PENDING_REGNUM: tc->ic_pending = value; break;
+    case TDM_SIM_CYCLES_REGNUM:	   tc->cycles = value; break;
+    default:
+      return 0;
+    }
+  return size;
 }
 
 static sim_cia

@@ -24,6 +24,11 @@ BRK (0b0xxx_1_111_xxxxxxxx, see "brk" in the assembler) stops the
 simulation with SIGTRAP, with the PC on the BRK; GDB uses 0x1f00 for
 its breakpoints.  The other opcode 4 words stop it with SIGILL.
 
+Besides pc, sp, r0 and r1, the debugger can read and write the CPU
+state that software can't see (sim/sim-tdm.h): intdis, the MMU fields
+and access violation bit, the interrupt enable and pending bits, and
+the cycle count.  The debugger accesses physical memory.
+
 Everything else goes to the bus.  By default there's 16K words of memory
 (0x0000..0x3fff) and the tdm_stdio device at 0xffe0..0xffe2:
 

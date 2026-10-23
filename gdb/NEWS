@@ -95,6 +95,9 @@ GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
 
 AArch64 MinGW                   aarch64-*-mingw*
 
+The Disintegrated Machine (TDM)  tdm-*-*
+  (simulator only)
+
 * New commands
 
 set local-environment
