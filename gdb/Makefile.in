@@ -892,6 +892,7 @@ ALL_TARGET_OBS = \
 	sparc-tdep.o \
 	svr4-tls-tdep.o \
 	symfile-mem.o \
+	tdm-tdep.o \
 	tic6x-linux-tdep.o \
 	tic6x-tdep.o \
 	v850-tdep.o \

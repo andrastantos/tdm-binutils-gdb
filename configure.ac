@@ -1201,7 +1201,7 @@ case "${target}" in
     noconfigdirs="$noconfigdirs target-libgloss gdb"
     ;;
   tdm-*-*)
-    noconfigdirs="$noconfigdirs target-libgloss gdb gdbserver gprof"
+    noconfigdirs="$noconfigdirs target-libgloss gdbserver gprof"
     ;;
   d10v-*-*)
     noconfigdirs="$noconfigdirs target-libgloss"
