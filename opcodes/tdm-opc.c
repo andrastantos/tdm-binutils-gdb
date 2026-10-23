@@ -63,6 +63,9 @@ const tdm_opc_info_t tdm_opc_info[] =
   { "istat",  TDM_FORM_ONE, { TDM_OP_ISTAT, 0 }, { TDM_OP_ISTAT, 1 } },
   { "ror",    TDM_FORM_ONE, { TDM_OP_ROR,   0 }, { TDM_OP_ROR,   1 } },
   { "rol",    TDM_FORM_ONE, { TDM_OP_ROL,   0 }, { TDM_OP_ROL,   1 } },
+
+  /* Breakpoint, see TDM_BRK_INSN.  */
+  { "brk",    TDM_FORM_BRK, { TDM_OP_OR, 1 }, NONE },
 };
 
 const unsigned int tdm_num_opcodes = sizeof (tdm_opc_info) / sizeof (tdm_opc_info[0]);

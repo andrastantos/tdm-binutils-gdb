@@ -164,6 +164,10 @@ execute (SIM_CPU *cpu)
   opa = TDM_INSN_OPA (iw);
   is_mem = !TDM_OPB_IS_IMM (opb);
 
+  /* Breakpoint: stop with the PC on it (it's not executed).  */
+  if (TDM_INSN_IS_BRK (iw))
+    sim_engine_halt (sd, cpu, NULL, pc, sim_stopped, SIM_SIGTRAP);
+
   /* Opcode 4 is unused, and swapping two registers isn't supported.  */
   if (opcode == TDM_OP_UNUSED || (opcode == TDM_OP_SWAP && !is_mem))
     sim_engine_halt (sd, cpu, NULL, pc, sim_signalled, SIM_SIGILL);

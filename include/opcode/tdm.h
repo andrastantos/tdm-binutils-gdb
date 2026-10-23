@@ -102,6 +102,19 @@
 
 #define TDM_OP_IS_PREDICATE(op)	(((op) & 0xc) == 0xc)
 
+/* Binary operations with a memory destination (D=1) but an immediate
+   operand B (OPB=7) do nothing, so this range is reserved for BRK, a
+   breakpoint for debuggers and simulators:
+
+     0b0xxx_1_111_xxxxxxxx
+
+   The canonical encoding is the OR form, 0x1f00 | n with n = 0..255.
+   (The SWAP form would load OPA from the undriven bus on the hardware;
+   the other forms are no-ops there.)  */
+#define TDM_BRK_INSN		0x1f00
+#define TDM_INSN_IS_BRK(i)	(((i) & 0x8f00) == 0x0f00)
+#define TDM_BRK_NUM(i)		((i) & 0xff)
+
 /* Assembler operand forms.  */
 enum tdm_operand_form
 {
@@ -110,7 +123,9 @@ enum tdm_operand_form
   /* Like TDM_FORM_TWO, but opb has to be a memory reference.  */
   TDM_FORM_TWO_MEM,
   /* "insn $reg" or "insn [mem]".  */
-  TDM_FORM_ONE
+  TDM_FORM_ONE,
+  /* "brk" or "brk n".  */
+  TDM_FORM_BRK
 };
 
 /* How a given operand order is encoded.  D < 0 means that the operand

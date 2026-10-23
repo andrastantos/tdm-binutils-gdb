@@ -15,3 +15,6 @@
 .*errors\.s:15: Error: unknown opcode `frob'
 .*errors\.s:16: Error: memory reference is not terminated properly
 .*errors\.s:17: Error: expecting a register
+.*errors\.s:18: Error: breakpoint number must be a constant in 0\.\.255
+.*errors\.s:19: Error: breakpoint number must be a constant in 0\.\.255
+.*errors\.s:20: Error: junk at end of line: `,2'
