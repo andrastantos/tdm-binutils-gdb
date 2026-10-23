@@ -53,5 +53,5 @@
 
 #define md_section_align(SEGMENT, SIZE)     (SIZE)
 
-#define MD_PCREL_FROM_SECTION(FIX, SEC)     md_pcrel_from (FIX)
-extern long md_pcrel_from (struct fix *);
+#define MD_PCREL_FROM_SECTION(FIX, SEC)     md_pcrel_from_section (FIX, SEC)
+extern long md_pcrel_from_section (struct fix *, segT);

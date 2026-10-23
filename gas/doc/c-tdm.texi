@@ -125,7 +125,10 @@ other ELF targets whose byte is wider than 8 bits, section and segment
 headers hold octet addresses, which is what @command{readelf} shows;
 @command{objdump} and @command{ld} use word addresses.
 
-DWARF debug information (@option{-g}) is not supported.
+DWARF line number information (@option{-g}, @code{.file} and
+@code{.loc}) works in word addresses: the addresses in the line table
+and in @code{.debug_info} count 16-bit words.  The debug sections
+themselves are addressed in octets, as on other targets.
 
 @node TDM Opcodes
 @section Opcodes

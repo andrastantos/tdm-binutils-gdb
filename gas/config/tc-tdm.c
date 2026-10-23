@@ -522,7 +522,7 @@ md_number_to_chars (char *ptr, valueT use, int nbytes)
 /* Generate a machine-dependent relocation.  */
 
 arelent *
-tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
+tc_gen_reloc (asection *section, fixS *fixP)
 {
   arelent *relP;
   bfd_reloc_code_real_type code = fixP->fx_r_type;
@@ -548,9 +548,11 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
   relP = notes_alloc (sizeof (arelent));
   relP->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *relP->sym_ptr_ptr = symbol_get_bfdsym (fixP->fx_addsy);
-  /* Relocation addresses are in 16-bit units.  */
-  relP->address = ((fixP->fx_frag->fr_address + fixP->fx_where)
-		   / OCTETS_PER_BYTE);
+  /* Relocation addresses are in 16-bit units, except in sections
+     addressed in octets (the DWARF debug sections).  */
+  relP->address = fixP->fx_frag->fr_address + fixP->fx_where;
+  if ((section->flags & SEC_OCTETS) == 0)
+    relP->address /= OCTETS_PER_BYTE;
   relP->addend = fixP->fx_offset;
 
   relP->howto = bfd_reloc_type_lookup (stdoutput, code);
@@ -566,10 +568,14 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
 }
 
 /* PC-relative operands are relative to the address of the instruction
-   itself, in 16-bit units.  */
+   itself, in 16-bit units (in octets in octet addressed sections).  */
 
 long
-md_pcrel_from (fixS *fixP)
+md_pcrel_from_section (fixS *fixP, segT sec)
 {
-  return (fixP->fx_frag->fr_address + fixP->fx_where) / OCTETS_PER_BYTE;
+  long addr = fixP->fx_frag->fr_address + fixP->fx_where;
+
+  if ((sec->flags & SEC_OCTETS) == 0)
+    addr /= OCTETS_PER_BYTE;
+  return addr;
 }
