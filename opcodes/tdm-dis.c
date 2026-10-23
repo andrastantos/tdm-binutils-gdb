@@ -109,6 +109,18 @@ print_insn_tdm (bfd_vma addr, struct disassemble_info *info)
   opa = TDM_INSN_OPA (iword);
   immed = TDM_INSN_IMMED (iword);
 
+  if (TDM_INSN_IS_BRK (iword))
+    {
+      info->fprintf_styled_func (info->stream, dis_style_mnemonic, "brk");
+      if (TDM_BRK_NUM (iword) != 0)
+	{
+	  info->fprintf_styled_func (info->stream, dis_style_text, "\t");
+	  info->fprintf_styled_func (info->stream, dis_style_immediate, "%d",
+				     TDM_BRK_NUM (iword));
+	}
+      return TDM_INSN_OCTETS;
+    }
+
   name = mnemonics[opcode][d];
   if (name == NULL)
     {

@@ -20,6 +20,10 @@ The CPU model includes the parts that are on the CPU in the hardware:
           limit is inclusive), user mode in 1; a 1 in bit 0 clears the
           access violation.
 
+BRK (0b0xxx_1_111_xxxxxxxx, see "brk" in the assembler) stops the
+simulation with SIGTRAP, with the PC on the BRK; GDB uses 0x1f00 for
+its breakpoints.  The other opcode 4 words stop it with SIGILL.
+
 Everything else goes to the bus.  By default there's 16K words of memory
 (0x0000..0x3fff) and the tdm_stdio device at 0xffe0..0xffe2:
 

@@ -291,6 +291,35 @@ md_assemble (char *str)
     }
 
   s = skip_space (str + len);
+  if (opcode->form == TDM_FORM_BRK)
+    {
+      offsetT num = 0;
+
+      if (!is_end_of_stmt (*s))
+	{
+	  s = parse_expression (s, &exp);
+	  if (s == NULL)
+	    return;
+	  if (exp.X_op != O_constant
+	      || exp.X_add_number < 0 || exp.X_add_number > 0xff)
+	    {
+	      as_bad (_("breakpoint number must be a constant in 0..255"));
+	      return;
+	    }
+	  num = exp.X_add_number;
+	  s = skip_space (s);
+	}
+      if (!is_end_of_stmt (*s))
+	{
+	  as_bad (_("junk at end of line: `%s'"), s);
+	  return;
+	}
+      p = frag_more (2);
+      md_number_to_chars (p, TDM_BRK_INSN | num, 2);
+      dwarf2_emit_insn (2);
+      return;
+    }
+
   if (*s == '[')
     {
       /* Memory operand first.  */

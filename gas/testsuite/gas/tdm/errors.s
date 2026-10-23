@@ -15,3 +15,6 @@
 	frob	$r0, 1
 	mov	$r0, [$sp+1
 	mov	$r2, 1
+	brk	256
+	brk	x
+	brk	1, 2
