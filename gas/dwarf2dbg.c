@@ -1550,10 +1550,10 @@ out_abbrev (int name, int form)
   out_uleb128 (form);
 }
 
-/* Get the size of a fragment.  */
+/* Get the size of a fragment, in octets.  */
 
 static offsetT
-get_frag_fix (fragS *frag, segT seg)
+get_frag_fix_octets (fragS *frag, segT seg)
 {
   frchainS *fr;
 
@@ -1568,6 +1568,19 @@ get_frag_fix (fragS *frag, segT seg)
       return (char *) obstack_next_free (&fr->frch_obstack) - frag->fr_literal;
 
   abort ();
+}
+
+/* Get the size of a fragment in the units of the values of symbols in
+   SEG: target bytes, or octets in a SEC_OCTETS section.  */
+
+static offsetT
+get_frag_fix (fragS *frag, segT seg)
+{
+  offsetT size = get_frag_fix_octets (frag, seg);
+
+  if ((seg->flags & SEC_OCTETS) == 0)
+    size /= OCTETS_PER_BYTE;
+  return size;
 }
 
 /* Set an absolute address (may result in a relocation entry).  */
