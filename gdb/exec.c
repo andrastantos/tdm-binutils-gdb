@@ -604,8 +604,11 @@ build_section_table (struct bfd *some_bfd)
       if (!(aflag & SEC_ALLOC))
 	continue;
 
+      /* The size is in octets, addresses count target bytes.  */
       table.emplace_back (bfd_section_vma (asect),
-			  bfd_section_vma (asect) + bfd_section_size (asect),
+			  bfd_section_vma (asect)
+			  + (bfd_section_size (asect)
+			     / bfd_octets_per_byte (some_bfd, asect)),
 			  asect);
     }
 
@@ -850,6 +853,9 @@ section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
     {
       struct bfd_section *asect = p.the_bfd_section;
       bfd *abfd = asect->owner;
+      /* MEMADDR and LEN count target bytes (addressable units), section
+	 contents are accessed in octets.  */
+      unsigned int opb = bfd_octets_per_byte (abfd, asect);
 
       if (match_cb != nullptr && !match_cb (&p))
 	continue;		/* not the section we need.  */
@@ -859,13 +865,13 @@ section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
 	    {
 	      /* Entire transfer is within this section.  */
 	      if (writebuf)
-		res = bfd_set_section_contents (abfd, asect,
-						writebuf, memaddr - p.addr,
-						len);
+		res = bfd_set_section_contents (abfd, asect, writebuf,
+						(memaddr - p.addr) * opb,
+						len * opb);
 	      else
-		res = bfd_get_section_contents (abfd, asect,
-						readbuf, memaddr - p.addr,
-						len);
+		res = bfd_get_section_contents (abfd, asect, readbuf,
+						(memaddr - p.addr) * opb,
+						len * opb);
 
 	      if (res != 0)
 		{
@@ -885,13 +891,13 @@ section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
 	      /* This section overlaps the transfer.  Just do half.  */
 	      len = p.endaddr - memaddr;
 	      if (writebuf)
-		res = bfd_set_section_contents (abfd, asect,
-						writebuf, memaddr - p.addr,
-						len);
+		res = bfd_set_section_contents (abfd, asect, writebuf,
+						(memaddr - p.addr) * opb,
+						len * opb);
 	      else
-		res = bfd_get_section_contents (abfd, asect,
-						readbuf, memaddr - p.addr,
-						len);
+		res = bfd_get_section_contents (abfd, asect, readbuf,
+						(memaddr - p.addr) * opb,
+						len * opb);
 	      if (res != 0)
 		{
 		  *xfered_len = len;

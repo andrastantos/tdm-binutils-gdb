@@ -1839,6 +1839,9 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
   CORE_ADDR bp_addr = 0;
   int bp_size = 0;
   int bptoffset = 0;
+  /* Addresses, lengths and offsets below are in addressable units, the
+     buffers in bytes.  */
+  int unit_size = gdbarch_addressable_memory_unit_size (gdbarch);
 
   if (!breakpoint_address_match (target_info->placed_address_space, 0,
 				 current_program_space->aspace.get (), 0))
@@ -1885,14 +1888,15 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
     {
       /* Verify that the readbuf buffer does not overlap with the
 	 shadow_contents buffer.  */
-      gdb_assert (target_info->shadow_contents >= readbuf + len
+      gdb_assert (target_info->shadow_contents >= readbuf + len * unit_size
 		  || readbuf >= (target_info->shadow_contents
-				 + target_info->shadow_len));
+				 + target_info->shadow_len * unit_size));
 
       /* Update the read buffer with this inserted breakpoint's
 	 shadow.  */
-      memcpy (readbuf + bp_addr - memaddr,
-	      target_info->shadow_contents + bptoffset, bp_size);
+      memcpy (readbuf + (bp_addr - memaddr) * unit_size,
+	      target_info->shadow_contents + bptoffset * unit_size,
+	      bp_size * unit_size);
     }
   else
     {
@@ -1901,8 +1905,9 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
       int placed_size;
 
       /* Update the shadow with what we want to write to memory.  */
-      memcpy (target_info->shadow_contents + bptoffset,
-	      writebuf_org + bp_addr - memaddr, bp_size);
+      memcpy (target_info->shadow_contents + bptoffset * unit_size,
+	      writebuf_org + (bp_addr - memaddr) * unit_size,
+	      bp_size * unit_size);
 
       /* Determine appropriate breakpoint contents and size for this
 	 address.  */
@@ -1910,7 +1915,8 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 
       /* Update the final write buffer with this inserted
 	 breakpoint's INSN.  */
-      memcpy (writebuf + bp_addr - memaddr, bp + bptoffset, bp_size);
+      memcpy (writebuf + (bp_addr - memaddr) * unit_size,
+	      bp + bptoffset * unit_size, bp_size * unit_size);
     }
 }
 

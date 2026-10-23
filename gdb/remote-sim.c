@@ -1028,6 +1028,9 @@ gdbsim_xfer_memory (struct target_ops *target,
   struct sim_inferior_data *sim_data
     = get_sim_inferior_data (current_inferior (), SIM_INSTANCE_NOT_NEEDED);
   int l;
+  /* MEMADDR and LEN count addressable units, the simulator octets.  */
+  int unit_size
+    = gdbarch_addressable_memory_unit_size (current_inferior ()->arch ());
 
   /* If this target doesn't have memory yet, return 0 causing the
      request to be passed to a lower target, hopefully an exec
@@ -1058,15 +1061,19 @@ gdbsim_xfer_memory (struct target_ops *target,
   if (writebuf)
     {
       if (remote_debug && len > 0)
-	dump_mem (writebuf, len);
-      l = sim_write (sim_data->gdbsim_desc, memaddr, writebuf, len);
+	dump_mem (writebuf, len * unit_size);
+      l = sim_write (sim_data->gdbsim_desc, memaddr * unit_size, writebuf,
+		     len * unit_size);
     }
   else
     {
-      l = sim_read (sim_data->gdbsim_desc, memaddr, readbuf, len);
+      l = sim_read (sim_data->gdbsim_desc, memaddr * unit_size, readbuf,
+		    len * unit_size);
       if (remote_debug && len > 0)
-	dump_mem (readbuf, len);
+	dump_mem (readbuf, len * unit_size);
     }
+  if (l > 0)
+    l /= unit_size;
   if (l > 0)
     {
       *xfered_len = (ULONGEST) l;

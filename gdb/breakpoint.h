@@ -284,7 +284,8 @@ struct bp_target_info
      this buffer are valid, and only when the breakpoint is inserted.  */
   gdb_byte shadow_contents[BREAKPOINT_MAX];
 
-  /* The length of the data cached in SHADOW_CONTENTS.  */
+  /* The length of the data cached in SHADOW_CONTENTS, in addressable
+     memory units (bytes on most targets).  */
   int shadow_len;
 
   /* The breakpoint's kind.  It is used in 'kind' parameter in Z

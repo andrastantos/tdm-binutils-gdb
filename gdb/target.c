@@ -1593,6 +1593,10 @@ memory_xfer_partial_1 (struct target_ops *ops, enum target_object object,
 	 with reading from a trace buffer, because reading outside of
 	 the collected memory range fails.  */
       && get_traceframe_number () == -1
+      /* The dcache works with byte addresses; it doesn't support
+	 addressable memory units larger than a byte.  As nothing is
+	 read into it, the write path doesn't use it either.  */
+      && gdbarch_addressable_memory_unit_size (inf->arch ()) == 1
       && (region->attrib.cache
 	  || (stack_cache_enabled_p () && object == TARGET_OBJECT_STACK_MEMORY)
 	  || (code_cache_enabled_p () && object == TARGET_OBJECT_CODE_MEMORY)))
@@ -1661,7 +1665,10 @@ memory_xfer_partial (struct target_ops *ops, enum target_object object,
 	 to mitigate this.  */
       len = std::min (ops->get_memory_xfer_limit (), len);
 
-      gdb::byte_vector buf (writebuf, writebuf + len);
+      /* LEN counts addressable units, the buffer bytes.  */
+      int unit_size
+	= gdbarch_addressable_memory_unit_size (current_inferior ()->arch ());
+      gdb::byte_vector buf (writebuf, writebuf + len * unit_size);
       breakpoint_xfer_memory (NULL, buf.data (), writebuf, memaddr, len);
       res = memory_xfer_partial_1 (ops, object, NULL, buf.data (), memaddr, len,
 				   xfered_len);
