@@ -7,7 +7,7 @@ Disassembly of section \.text:
 00000000 <_start>:
    0:	8080 	mov	\$r0, \[\$pc\]	; 0 <_start>
 			0: R_TDM_PCREL6	\.rodata\+0x1
-   1:	83c0 	mov	\$r1, \[0\]
+   1:	83c0 	mov	\$r1, \$mr0
 			1: R_TDM_IMM6	ioport
    2:	8740 	mov	\$sp, 0
 			2: R_TDM_IMM6	small

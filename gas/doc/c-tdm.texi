@@ -60,6 +60,13 @@ or an immediate:
 @itemx [@var{e}]
 The memory location at a register plus @var{e}, or at @var{e}.
 
+@item $mr@var{n}
+The memory pseudo-registers @code{$mr0} to @code{$mr31} are aliases of
+@code{[0]} to @code{[31]}, the words directly reachable through the
+immediate field.  (The negative addresses, @code{[-32]} to @code{[-1]},
+are the I/O page; they have no aliases.)  The disassembler shows these
+memory references as pseudo-registers too.
+
 @item $pc+@var{e}
 @itemx $sp+@var{e}
 @itemx $r0+@var{e}

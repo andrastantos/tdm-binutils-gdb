@@ -18,3 +18,6 @@
 .*errors\.s:18: Error: breakpoint number must be a constant in 0\.\.255
 .*errors\.s:19: Error: breakpoint number must be a constant in 0\.\.255
 .*errors\.s:20: Error: junk at end of line: `,2'
+.*errors\.s:21: Error: memory pseudo-register \$mr32 is out of range \(0\.\.31\)
+.*errors\.s:22: Error: expecting a register
+.*errors\.s:23: Error: junk at end of line: `\+1'
