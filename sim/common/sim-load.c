@@ -128,7 +128,9 @@ sim_load_file (SIM_DESC sd, const char *myname, host_callback *callback,
 		}
 	      data_count += size;
 	      bfd_get_section_contents (result_bfd, s, buffer, 0, size);
-	      do_write (sd, lma, buffer, size);
+	      /* The LMA is in target bytes, the sim core in octets.  */
+	      do_write (sd, lma * bfd_octets_per_byte (result_bfd, s), buffer,
+			size);
 	      found_loadable_section = 1;
 	      free (buffer);
 	    }
