@@ -328,8 +328,9 @@ extern void gdb_disassembly (struct gdbarch *gdbarch, struct ui_out *uiout,
 			     CORE_ADDR low, CORE_ADDR high);
 
 /* Print the instruction at address MEMADDR in debugged memory,
-   on STREAM.  Returns the length of the instruction, in bytes,
-   and, if requested, the number of branch delay slot instructions.  */
+   on STREAM.  Returns the length of the instruction, in addressable
+   memory units (bytes on most targets), and, if requested, the number
+   of branch delay slot instructions.  */
 
 extern int gdb_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
 			   struct ui_file *stream, int *branch_delay_insns);
@@ -372,13 +373,14 @@ private:
   gdb::byte_vector m_opcode_data;
 };
 
-/* Return the length in bytes of the instruction at address MEMADDR in
-   debugged memory.  */
+/* Return the length in addressable memory units of the instruction at
+   address MEMADDR in debugged memory.  */
 
 extern int gdb_insn_length (struct gdbarch *gdbarch, CORE_ADDR memaddr);
 
-/* Return the length in bytes of INSN, originally at MEMADDR.  MAX_LEN
-   is the size of the buffer containing INSN.  */
+/* Return the length in addressable memory units of INSN, originally at
+   MEMADDR.  MAX_LEN is the size, in bytes, of the buffer containing
+   INSN.  */
 
 extern int gdb_buffered_insn_length (struct gdbarch *gdbarch,
 				     const gdb_byte *insn, int max_len,

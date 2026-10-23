@@ -151,7 +151,9 @@ gdb_disassembler_memory_reader::dis_asm_read_memory
 {
   auto res = catch_exceptions<int, -1> ([&]
     {
-      return target_read_code (memaddr, myaddr, len);
+      /* LEN is in octets, target_read_code wants addressable units.  */
+      return target_read_code (memaddr, myaddr,
+			       len / info->octets_per_byte);
     });
 
   return res;
@@ -424,15 +426,18 @@ gdb_pretty_print_disassembler::pretty_print_insn (const struct disasm_insn *insn
 	   write them out in a single go for the MI.  */
 	m_opcode_stb.clear ();
 
-	/* Read the instruction opcode data.  */
-	m_opcode_data.resize (size);
+	/* Read the instruction opcode data.  SIZE is in addressable
+	   units, OCTETS in bytes of the host.  */
+	int octets
+	  = size * gdbarch_addressable_memory_unit_size (m_di.arch ());
+	m_opcode_data.resize (octets);
 	read_code (pc, m_opcode_data.data (), size);
 
 	/* The disassembler provides information about the best way to
 	   display the instruction bytes to the user.  We provide some sane
 	   defaults in case the disassembler gets it wrong.  */
 	const struct disassemble_info *di = m_di.disasm_info ();
-	int bytes_per_line = std::max (di->bytes_per_line, size);
+	int bytes_per_line = std::max (di->bytes_per_line, octets);
 	int bytes_per_chunk = std::max (di->bytes_per_chunk, 1);
 
 	/* If the user has requested the instruction bytes be displayed
@@ -441,11 +446,11 @@ gdb_pretty_print_disassembler::pretty_print_insn (const struct disasm_insn *insn
 	   disassembler problem) then avoid that causing display problems
 	   by switching to byte at a time mode.  */
 	if ((flags & DISASSEMBLY_RAW_BYTES) != 0
-	    || (size % bytes_per_chunk) != 0)
+	    || (octets % bytes_per_chunk) != 0)
 	  bytes_per_chunk = 1;
 
 	/* Print the instruction opcodes bytes, grouped into chunks.  */
-	for (int i = 0; i < size; i += bytes_per_chunk)
+	for (int i = 0; i < octets; i += bytes_per_chunk)
 	  {
 	    if (i > 0)
 	      m_opcode_stb.puts (" ");
@@ -464,9 +469,9 @@ gdb_pretty_print_disassembler::pretty_print_insn (const struct disasm_insn *insn
 
 	/* Calculate required padding.  */
 	int nspaces = 0;
-	for (int i = size; i < bytes_per_line; i += bytes_per_chunk)
+	for (int i = octets; i < bytes_per_line; i += bytes_per_chunk)
 	  {
-	    if (i > size)
+	    if (i > octets)
 	      nspaces++;
 	    nspaces += bytes_per_chunk * 2;
 	  }
@@ -1023,6 +1028,7 @@ gdb_disassemble_info::gdb_disassemble_info
   m_di.mach = gdbarch_bfd_arch_info (gdbarch)->mach;
   m_di.endian = gdbarch_byte_order (gdbarch);
   m_di.endian_code = gdbarch_byte_order_for_code (gdbarch);
+  m_di.octets_per_byte = gdbarch_addressable_memory_unit_size (gdbarch);
   m_di.application_data = this;
   m_disassembler_options_holder = get_all_disassembler_options (gdbarch);
   if (!m_disassembler_options_holder.empty ())
@@ -1052,12 +1058,17 @@ gdb_print_insn_1 (struct gdbarch *gdbarch, CORE_ADDR vma,
 {
   /* Call into the extension languages to do the disassembly.  */
   std::optional<int> length = ext_lang_print_insn (gdbarch, vma, info);
-  if (length.has_value ())
-    return *length;
 
   /* No extension language wanted to do the disassembly, so do it
      manually.  */
-  return gdbarch_print_insn (gdbarch, vma, info);
+  if (!length.has_value ())
+    length = gdbarch_print_insn (gdbarch, vma, info);
+
+  /* The disassembler returns a length in octets; callers add it to
+     addresses, which count addressable units.  */
+  if (*length > 0)
+    *length /= gdbarch_addressable_memory_unit_size (gdbarch);
+  return *length;
 }
 
 /* See disasm.h.  */
@@ -1171,8 +1182,9 @@ gdb_disassembly (struct gdbarch *gdbarch, struct ui_out *uiout,
 }
 
 /* Print the instruction at address MEMADDR in debugged memory,
-   on STREAM.  Returns the length of the instruction, in bytes,
-   and, if requested, the number of branch delay slot instructions.  */
+   on STREAM.  Returns the length of the instruction, in addressable
+   memory units (bytes on most targets), and, if requested, the number
+   of branch delay slot instructions.  */
 
 int
 gdb_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
@@ -1184,8 +1196,8 @@ gdb_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
   return di.print_insn (memaddr, branch_delay_insns);
 }
 
-/* Return the length in bytes of the instruction at address MEMADDR in
-   debugged memory.  */
+/* Return the length in addressable memory units of the instruction at
+   address MEMADDR in debugged memory.  */
 
 int
 gdb_insn_length (struct gdbarch *gdbarch, CORE_ADDR addr)
@@ -1235,8 +1247,8 @@ struct gdb_non_printing_buffer_disassembler
   }
 };
 
-/* Return the length in bytes of INSN.  MAX_LEN is the size of the
-   buffer containing INSN.  */
+/* Return the length in addressable memory units of INSN.  MAX_LEN is
+   the size, in bytes, of the buffer containing INSN.  */
 
 int
 gdb_buffered_insn_length (struct gdbarch *gdbarch,

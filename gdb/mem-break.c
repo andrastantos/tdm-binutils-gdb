@@ -44,13 +44,15 @@ default_memory_insert_breakpoint (struct gdbarch *gdbarch,
   int bplen;
   int val;
 
-  /* Determine appropriate breakpoint contents and size for this address.  */
+  /* Determine appropriate breakpoint contents and size for this address.
+     BPLEN is in bytes, target memory is accessed in addressable units.  */
   bp = gdbarch_sw_breakpoint_from_kind (gdbarch, bp_tgt->kind, &bplen);
+  int bp_units = bplen / gdbarch_addressable_memory_unit_size (gdbarch);
 
   /* Save the memory contents in the shadow_contents buffer and then
      write the breakpoint instruction.  */
   readbuf = (gdb_byte *) alloca (bplen);
-  val = target_read_memory (addr, readbuf, bplen);
+  val = target_read_memory (addr, readbuf, bp_units);
   if (val == 0)
     {
       /* These must be set together, either before or after the shadow
@@ -61,10 +63,10 @@ default_memory_insert_breakpoint (struct gdbarch *gdbarch,
 	 permanent breakpoint, for targets that support breakpoint
 	 conditions/commands on the target side for some types of
 	 breakpoints, such as target remote.  */
-      bp_tgt->shadow_len = bplen;
+      bp_tgt->shadow_len = bp_units;
       memcpy (bp_tgt->shadow_contents, readbuf, bplen);
 
-      val = target_write_raw_memory (addr, bp, bplen);
+      val = target_write_raw_memory (addr, bp, bp_units);
     }
 
   return val;
@@ -80,7 +82,8 @@ default_memory_remove_breakpoint (struct gdbarch *gdbarch,
   gdbarch_sw_breakpoint_from_kind (gdbarch, bp_tgt->kind, &bplen);
 
   return target_write_raw_memory (bp_tgt->placed_address, bp_tgt->shadow_contents,
-				  bplen);
+				  bplen
+				  / gdbarch_addressable_memory_unit_size (gdbarch));
 }
 
 
@@ -119,7 +122,8 @@ memory_validate_breakpoint (struct gdbarch *gdbarch,
   /* Make sure we see the memory breakpoints.  */
   scoped_restore restore_memory
     = make_scoped_restore_show_memory_breakpoints (1);
-  val = target_read_memory (addr, cur_contents, bplen);
+  val = target_read_memory (addr, cur_contents,
+			    bplen / gdbarch_addressable_memory_unit_size (gdbarch));
 
   /* If our breakpoint is no longer at the address, this means that
      the program modified the code on us, so it is wrong to put back

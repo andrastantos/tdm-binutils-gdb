@@ -291,7 +291,8 @@ print_formatted (struct value *val, int size,
 		 struct ui_file *stream)
 {
   struct type *type = check_typedef (val->type ());
-  int len = type->length ();
+  /* Addresses count addressable units, which may be wider than a byte.  */
+  int len = type_length_units (type);
 
   if (val->lval () == lval_memory)
     next_address = val->address () + len;
@@ -1129,14 +1130,14 @@ do_examine_next_address (struct format_data fmt)
 	}
       else
 	{
-	  next_address = next_address - count * val_type->length ();
+	  next_address = next_address - count * type_length_units (val_type);
 	}
 
       /* The following call to print_formatted updates next_address in every
 	 iteration.  In backward case, we store the start address here
 	 and update next_address with it before exiting the function.  */
       addr_rewound = (format == 's'
-		      ? next_address - val_type->length ()
+		      ? next_address - type_length_units (val_type)
 		      : next_address);
       need_to_update_next_address = true;
     }
