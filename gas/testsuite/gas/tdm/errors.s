@@ -18,3 +18,6 @@
 	brk	256
 	brk	x
 	brk	1, 2
+	mov	$r0, $mr32
+	add	$mr1, $mr2
+	mov	$r0, $mr5+1

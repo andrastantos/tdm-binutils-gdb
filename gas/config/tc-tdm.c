@@ -32,7 +32,8 @@
      $pc+e   $sp+e   $r0+e   e		immediates
 
    E is a signed 6-bit value.  The "+e" after a base register may be
-   omitted, but if present has to start with '+' or '-'.
+   omitted, but if present has to start with '+' or '-'.  The memory
+   pseudo-registers $mr0 to $mr31 are aliases of [0] to [31].
 
    TDM is word addressed.  GAS works in octets internally, so every
    instruction or data word is two octets, but symbol values, '.' and
@@ -141,6 +142,43 @@ parse_register (char **ptr)
   return reg;
 }
 
+/* Return true if S starts with a memory pseudo-register: $mr0 to
+   $mr31 are aliases of [0] to [31].  (Negative absolute addresses are
+   the I/O page; they have no aliases.)  */
+
+static bool
+is_mem_register (const char *s)
+{
+  int i = 3;
+
+  if (s[0] != '$' || TOLOWER (s[1]) != 'm' || TOLOWER (s[2]) != 'r'
+      || !ISDIGIT (s[3]))
+    return false;
+  while (ISDIGIT (s[i]))
+    i++;
+  return !is_part_of_name (s[i]);
+}
+
+/* Parse the memory pseudo-register at *PTR (see is_mem_register),
+   advance *PTR past it and return its number, or -1 if it's out of
+   range.  */
+
+static int
+parse_mem_register (char **ptr)
+{
+  char *end;
+  long n = strtol (*ptr + 3, &end, 10);
+
+  *ptr = end;
+  if (n > TDM_IMMED_MAX)
+    {
+      as_bad (_("memory pseudo-register $mr%ld is out of range (0..%d)"),
+	      n, TDM_IMMED_MAX);
+      return -1;
+    }
+  return n;
+}
+
 /* Parse an expression at S, return the first character after it.  */
 
 static char *
@@ -196,6 +234,17 @@ parse_opb (char *s, bool allow_imm, int *opb, expressionS *exp)
   int base;
 
   s = skip_space (s);
+  if (is_mem_register (s))
+    {
+      int n = parse_mem_register (&s);
+
+      if (n < 0)
+	return NULL;
+      *opb = TDM_OPB_MEM;
+      exp->X_op = O_constant;
+      exp->X_add_number = n;
+      return s;
+    }
   if (*s == '[')
     {
       s = skip_space (s + 1);
@@ -320,7 +369,7 @@ md_assemble (char *str)
       return;
     }
 
-  if (*s == '[')
+  if (*s == '[' || is_mem_register (s))
     {
       /* Memory operand first.  */
       enc = &opcode->mem_first;

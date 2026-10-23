@@ -64,6 +64,15 @@ print_opb (disassemble_info *info, unsigned int opb, int immed)
   bool is_mem = !TDM_OPB_IS_IMM (opb);
   unsigned int base = TDM_OPB_BASE (opb);
 
+  /* The first 32 words are shown as the memory pseudo-registers
+     $mr0..$mr31; negative absolute addresses (the I/O page) aren't.  */
+  if (is_mem && base == TDM_OPB_BASE_NONE && immed >= 0)
+    {
+      info->fprintf_styled_func (info->stream, dis_style_register, "$mr%d",
+				 immed);
+      return;
+    }
+
   if (is_mem)
     info->fprintf_styled_func (info->stream, dis_style_text, "[");
   if (base == TDM_OPB_BASE_NONE)

@@ -8,7 +8,7 @@ Disassembly of section \.text:
    0:	1003 	or	\$pc, \[\$pc\+3\]	; 0x3
    1:	117c 	or	\$sp, \[\$sp-4\]
    2:	1280 	or	\$r0, \[\$r0\]
-   3:	13d1 	or	\$r1, \[17\]
+   3:	13d1 	or	\$r1, \$mr17
    4:	1405 	or	\$pc, \$pc\+5	; 0x9
    5:	157a 	or	\$sp, \$sp-6
    6:	1680 	or	\$r0, \$r0
@@ -20,7 +20,7 @@ Disassembly of section \.text:
    c:	2003 	and	\$pc, \[\$pc\+3\]	; 0xf
    d:	217c 	and	\$sp, \[\$sp-4\]
    e:	2280 	and	\$r0, \[\$r0\]
-   f:	23d1 	and	\$r1, \[17\]
+   f:	23d1 	and	\$r1, \$mr17
   10:	2405 	and	\$pc, \$pc\+5	; 0x15
   11:	257a 	and	\$sp, \$sp-6
   12:	2680 	and	\$r0, \$r0
@@ -32,7 +32,7 @@ Disassembly of section \.text:
   18:	3003 	xor	\$pc, \[\$pc\+3\]	; 0x1b
   19:	317c 	xor	\$sp, \[\$sp-4\]
   1a:	3280 	xor	\$r0, \[\$r0\]
-  1b:	33d1 	xor	\$r1, \[17\]
+  1b:	33d1 	xor	\$r1, \$mr17
   1c:	3405 	xor	\$pc, \$pc\+5	; 0x21
   1d:	357a 	xor	\$sp, \$sp-6
   1e:	3680 	xor	\$r0, \$r0
@@ -44,7 +44,7 @@ Disassembly of section \.text:
   24:	5003 	add	\$pc, \[\$pc\+3\]	; 0x27
   25:	517c 	add	\$sp, \[\$sp-4\]
   26:	5280 	add	\$r0, \[\$r0\]
-  27:	53d1 	add	\$r1, \[17\]
+  27:	53d1 	add	\$r1, \$mr17
   28:	5405 	add	\$pc, \$pc\+5	; 0x2d
   29:	557a 	add	\$sp, \$sp-6
   2a:	5680 	add	\$r0, \$r0
@@ -56,7 +56,7 @@ Disassembly of section \.text:
   30:	6003 	sub	\$pc, \[\$pc\+3\]	; 0x33
   31:	617c 	sub	\$sp, \[\$sp-4\]
   32:	6280 	sub	\$r0, \[\$r0\]
-  33:	63d1 	sub	\$r1, \[17\]
+  33:	63d1 	sub	\$r1, \$mr17
   34:	6405 	sub	\$pc, \$pc\+5	; 0x39
   35:	657a 	sub	\$sp, \$sp-6
   36:	6680 	sub	\$r0, \$r0
@@ -68,7 +68,7 @@ Disassembly of section \.text:
   3c:	7003 	isub	\$pc, \[\$pc\+3\]	; 0x3f
   3d:	717c 	isub	\$sp, \[\$sp-4\]
   3e:	7280 	isub	\$r0, \[\$r0\]
-  3f:	73d1 	isub	\$r1, \[17\]
+  3f:	73d1 	isub	\$r1, \$mr17
   40:	7405 	isub	\$pc, \$pc\+5	; 0x45
   41:	757a 	isub	\$sp, \$sp-6
   42:	7680 	isub	\$r0, \$r0
@@ -80,7 +80,7 @@ Disassembly of section \.text:
   48:	8003 	mov	\$pc, \[\$pc\+3\]	; 0x4b
   49:	817c 	mov	\$sp, \[\$sp-4\]
   4a:	8280 	mov	\$r0, \[\$r0\]
-  4b:	83d1 	mov	\$r1, \[17\]
+  4b:	83d1 	mov	\$r1, \$mr17
   4c:	8405 	mov	\$pc, \$pc\+5	; 0x51
   4d:	857a 	mov	\$sp, \$sp-6
   4e:	8680 	mov	\$r0, \$r0
