@@ -270,8 +270,9 @@ md_assemble (char *str)
   char *s, *p;
 
   str = skip_space (str);
-  for (len = 0; !is_end_of_stmt (str[len]) && !is_whitespace (str[len]);
-       len++)
+  /* The mnemonic ends at the first character that can't be part of a
+     name: macro expansion may drop the space in "mov [$sp], $r0".  */
+  for (len = 0; is_part_of_name (str[len]); len++)
     if (len < sizeof (mnemonic) - 1)
       mnemonic[len] = TOLOWER (str[len]);
   if (len == 0)
