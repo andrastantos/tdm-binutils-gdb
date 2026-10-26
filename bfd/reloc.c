@@ -2194,6 +2194,11 @@ ENUMX
 ENUMDOC
   TDM relocations: the signed 6-bit IMMED field of an instruction,
   absolute or relative to the address of the instruction.
+ENUM
+  BFD_RELOC_TDM_BYTEPTR16
+ENUMDOC
+  TDM 16-bit byte pointer: twice the word address of the symbol, plus
+  the addend in octets.
 
 ENUM
   BFD_RELOC_FRV_LABEL16

@@ -53,5 +53,25 @@
 
 #define md_section_align(SEGMENT, SIZE)     (SIZE)
 
+/* Octet data (.octet, .ascii) is packed; the word it ends in is padded
+   when anything else follows.  See tc-tdm.c.  */
+#define md_flush_pending_output()	tdm_pad_octet ()
+#define tc_frob_label(SYM)		tdm_frob_label (SYM)
+extern void tdm_pad_octet (void);
+extern void tdm_frob_label (symbolS *);
+
+/* Pad the last word of each subsection, except in the debug sections,
+   which are addressed in octets.  */
+#define SUB_SEGMENT_ALIGN(SEG, FRCHAIN) \
+  ((bfd_section_flags (SEG) & SEC_OCTETS) != 0 ? 0 : OCTETS_PER_BYTE_POWER)
+
+/* %bptr(sym) byte pointers in data.  */
+#define TC_PARSE_CONS_EXPRESSION(EXP, NBYTES) \
+  tdm_parse_cons_expression (EXP, NBYTES)
+extern bfd_reloc_code_real_type tdm_parse_cons_expression (expressionS *,
+							   int);
+#define tc_fix_adjustable(FIX)		tdm_fix_adjustable (FIX)
+extern bool tdm_fix_adjustable (struct fix *);
+
 #define MD_PCREL_FROM_SECTION(FIX, SEC)     md_pcrel_from_section (FIX, SEC)
 extern long md_pcrel_from_section (struct fix *, segT);

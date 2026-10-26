@@ -19,4 +19,5 @@
 if { [istarget tdm-*-*] } {
     run_dump_tests [lsort [glob -nocomplain $srcdir/$subdir/*.d]]
     run_list_test "errors" ""
+    run_list_test "bptr-errors" ""
 }

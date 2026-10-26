@@ -41,6 +41,7 @@
 
 #include "as.h"
 #include "safe-ctype.h"
+#include "dwarf2dbg.h"
 #include "opcode/tdm.h"
 #include "elf/tdm.h"
 
@@ -53,16 +54,156 @@ const char EXP_CHARS[] = "eE";
 
 static htab_t opcode_hash_control;
 
-/* .ascii and friends: pack two characters per word, first character in
-   the low octet, and pad the last word with a zero octet if needed.
-   This matches the string layout of the reference assembler.  */
+/* Octet data.  .octet and the string directives emit single octets,
+   two per word, the first in the low octet.  Consecutive octet data is
+   packed, which lets a C compiler lay out char arrays and packed
+   structures.  The last word is padded with a zero octet lazily, when
+   anything else (an instruction, a label, other data, alignment, a
+   section switch or the end of the section) follows.  */
+
+/* Set while an .octet directive emits its values.  */
+static bool tdm_octet_mode;
+
+/* Pad the current word with a zero octet if it is half full.  */
+
+void
+tdm_pad_octet (void)
+{
+  if (tdm_octet_mode || now_seg == absolute_section)
+    return;
+  if (frag_now_fix_octets () % OCTETS_PER_BYTE != 0)
+    FRAG_APPEND_1_CHAR (0);
+}
+
+static void
+tdm_octet (int ignore ATTRIBUTE_UNUSED)
+{
+  tdm_octet_mode = true;
+  cons (1);
+  tdm_octet_mode = false;
+}
+
+/* .ascii and friends: as .octet, with a character per octet.  This
+   matches the string layout of the reference assembler, except that
+   consecutive strings are packed.  */
 
 static void
 tdm_stringer (int bits_appendzero)
 {
+  tdm_octet_mode = true;
   stringer (bits_appendzero);
-  while (frag_now_fix_octets () % OCTETS_PER_BYTE != 0)
-    FRAG_APPEND_1_CHAR (0);
+  tdm_octet_mode = false;
+}
+
+/* A label at a half full word would get the address of the word it
+   shares with the preceding octet; move it to the next word.  This
+   replaces obj_frob_label, so it also records the label for DWARF.  */
+
+void
+tdm_frob_label (symbolS *sym)
+{
+  if (now_seg != absolute_section
+      && symbol_get_frag (sym) == frag_now
+      && frag_now_fix_octets () % OCTETS_PER_BYTE != 0)
+    {
+      FRAG_APPEND_1_CHAR (0);
+      S_SET_VALUE (sym, frag_now_fix ());
+    }
+  dwarf2_emit_label (sym);
+}
+
+/* Byte pointers.  C data pointers on TDM are byte addresses: twice the
+   word address, plus one for the high octet of the word.  In data,
+   %bptr(EXPR) is the byte address of the word address EXPR, optionally
+   followed by "+ N" or "- N" octets:
+
+     .word %bptr(str) + 3	; the fourth character of STR
+
+   A symbolic EXPR produces an R_TDM_BYTEPTR16 relocation.  */
+
+bfd_reloc_code_real_type
+tdm_parse_cons_expression (expressionS *exp, int nbytes)
+{
+  offsetT octets = 0;
+
+  SKIP_WHITESPACE ();
+  if (strncasecmp (input_line_pointer, "%bptr", 5) != 0)
+    {
+      expression (exp);
+      return BFD_RELOC_NONE;
+    }
+  input_line_pointer += 5;
+  SKIP_WHITESPACE ();
+  if (*input_line_pointer != '(')
+    {
+      as_bad (_("missing `(' after %%bptr"));
+      while (!is_end_of_stmt (*input_line_pointer))
+	++input_line_pointer;
+      exp->X_op = O_constant;
+      exp->X_add_number = 0;
+      return BFD_RELOC_NONE;
+    }
+  ++input_line_pointer;
+  expression (exp);
+  SKIP_WHITESPACE ();
+  if (*input_line_pointer != ')')
+    as_bad (_("missing `)' after %%bptr expression"));
+  else
+    ++input_line_pointer;
+
+  SKIP_WHITESPACE ();
+  if (*input_line_pointer == '+' || *input_line_pointer == '-')
+    {
+      expressionS off;
+
+      expression (&off);
+      if (off.X_op != O_constant)
+	as_bad (_("the octet offset after %%bptr(...) must be a constant"));
+      else
+	octets = off.X_add_number;
+    }
+
+  if (nbytes != 2)
+    {
+      as_bad (_("a byte pointer has to be a 16-bit word"));
+      exp->X_op = O_constant;
+      exp->X_add_number = 0;
+      return BFD_RELOC_NONE;
+    }
+
+  if (exp->X_op == O_symbol
+      && S_GET_SEGMENT (exp->X_add_symbol) == absolute_section
+      && S_IS_DEFINED (exp->X_add_symbol))
+    {
+      exp->X_op = O_constant;
+      exp->X_add_number += S_GET_VALUE (exp->X_add_symbol);
+    }
+
+  switch (exp->X_op)
+    {
+    case O_constant:
+      exp->X_add_number = 2 * exp->X_add_number + octets;
+      return BFD_RELOC_NONE;
+
+    case O_symbol:
+      exp->X_add_number = 2 * exp->X_add_number + octets;
+      return BFD_RELOC_TDM_BYTEPTR16;
+
+    default:
+      as_bad (_("%%bptr needs a symbol plus a constant"));
+      exp->X_op = O_constant;
+      exp->X_add_number = 0;
+      return BFD_RELOC_NONE;
+    }
+}
+
+/* The addend of a byte pointer counts octets, while symbol values count
+   words, so its symbol can't be replaced by a section symbol.  */
+
+bool
+tdm_fix_adjustable (fixS *fixP)
+{
+  return fixP->fx_r_type != BFD_RELOC_TDM_BYTEPTR16;
 }
 
 const pseudo_typeS md_pseudo_table[] =
@@ -73,6 +214,7 @@ const pseudo_typeS md_pseudo_table[] =
   { "space",	s_space,	2 },
   { "skip",	s_space,	2 },
   { "zero",	s_space,	2 },
+  { "octet",	tdm_octet,	0 },
   { "ascii",	tdm_stringer,	8 + 0 },
   { "asciz",	tdm_stringer,	8 + 1 },
   { "string",	tdm_stringer,	8 + 1 },
@@ -363,6 +505,7 @@ md_assemble (char *str)
 	  as_bad (_("junk at end of line: `%s'"), s);
 	  return;
 	}
+      tdm_pad_octet ();
       p = frag_more (2);
       md_number_to_chars (p, TDM_BRK_INSN | num, 2);
       dwarf2_emit_insn (2);
@@ -422,8 +565,7 @@ md_assemble (char *str)
 
   iword = TDM_INSN (enc->opcode, enc->d, opb, opa, 0);
 
-  if (frag_now_fix_octets () % OCTETS_PER_BYTE != 0)
-    as_bad (_("instruction is not word aligned"));
+  tdm_pad_octet ();
   p = frag_more (2);
 
   if (exp.X_op == O_constant)
@@ -496,6 +638,16 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	}
       break;
 
+    case BFD_RELOC_TDM_BYTEPTR16:
+      /* The value of an absolute symbol would have to be doubled; that
+	 is done in tdm_parse_cons_expression, which can't see symbols
+	 that only become absolute later.  */
+      if (fixP->fx_addsy == NULL)
+	as_bad_where (fixP->fx_file, fixP->fx_line,
+		      _("%%bptr of a symbol that is only known to be "
+			"absolute at the end of assembly"));
+      break;
+
     case BFD_RELOC_8:
     case BFD_RELOC_16:
     case BFD_RELOC_32:
@@ -533,6 +685,7 @@ tc_gen_reloc (asection *section, fixS *fixP)
     case BFD_RELOC_TDM_PCREL6:
       break;
 
+    case BFD_RELOC_TDM_BYTEPTR16:
     case BFD_RELOC_16:
     case BFD_RELOC_32:
       if (!fixP->fx_pcrel)

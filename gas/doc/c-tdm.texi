@@ -115,10 +115,30 @@ first.
 align to a number of words.
 
 @item
-@code{.ascii}, @code{.asciz} and @code{.string} pack two characters per
-word, the first character in the low octet, and pad the last word with
-a zero octet if needed.
+@cindex @code{octet} directive, TDM
+@code{.octet} emits single octets, and @code{.ascii}, @code{.asciz} and
+@code{.string} a character per octet.  They pack two octets per word,
+the first in the low octet.  Consecutive octet data is packed, which
+lets a compiler lay out @code{char} arrays and packed structures.  A
+half full word is padded with a zero octet when anything else follows:
+an instruction, a label, other data, alignment, a section switch or the
+end of the section.
 @end itemize
+
+@cindex byte pointers, TDM
+@cindex @code{%bptr}, TDM
+C data pointers on TDM are byte addresses: twice the word address, plus
+one for the high octet of the word.  In @code{.word} (and the other
+16-bit data directives) @code{%bptr(@var{expr})} is the byte address of
+the word address @var{expr}, optionally followed by @code{+ @var{n}} or
+@code{- @var{n}} octets:
+
+@smallexample
+        .word   %bptr(str) + 3          ; the fourth character of str
+@end smallexample
+
+A symbolic @var{expr} produces an @code{R_TDM_BYTEPTR16} relocation.
+Byte pointers reach the first 32K words.
 
 Object files store 16-bit words in little endian octet order.  As with
 other ELF targets whose byte is wider than 8 bits, section and segment
@@ -209,4 +229,7 @@ around as above.
 The 6-bit immediate field, relative to the address of the instruction.
 @code{[$pc + (@var{label} - .)]} produces this relocation when
 @var{label} is in another section or file.
+@item R_TDM_BYTEPTR16
+A 16-bit byte pointer, emitted by @code{%bptr}: twice the word address
+of the symbol, plus the addend, which counts octets.
 @end table

@@ -1,6 +1,7 @@
 ; Data directives.  A TDM byte is 16 bits: .byte, .space, .zero and the
 ; alignment directives count words.  Strings pack two characters per
-; word, first character in the low octet, padded to a whole word.
+; word, first character in the low octet; consecutive strings are packed
+; and the last word is padded when other data follows.
 	.data
 	.byte	1, -1
 	.word	0x1234, -2
