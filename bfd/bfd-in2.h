@@ -3816,6 +3816,10 @@ enum bfd_reloc_code_real
   BFD_RELOC_TDM_IMM6,
   BFD_RELOC_TDM_PCREL6,
 
+  /* TDM 16-bit byte pointer: twice the word address of the symbol, plus
+     the addend in octets.  */
+  BFD_RELOC_TDM_BYTEPTR16,
+
   /* Fujitsu Frv Relocations.  */
   BFD_RELOC_FRV_LABEL16,
   BFD_RELOC_FRV_LABEL24,

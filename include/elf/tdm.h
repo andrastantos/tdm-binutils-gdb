@@ -35,6 +35,9 @@ START_RELOC_NUMBERS (elf_tdm_reloc_type)
   RELOC_NUMBER (R_TDM_IMM6, 3)
   /* As R_TDM_IMM6, but relative to the address of the instruction.  */
   RELOC_NUMBER (R_TDM_PCREL6, 4)
+  /* A 16-bit byte pointer, as used by C: twice the word address of the
+     symbol, plus the addend, which counts octets.  */
+  RELOC_NUMBER (R_TDM_BYTEPTR16, 5)
 END_RELOC_NUMBERS (R_TDM_max)
 
 #endif /* _ELF_TDM_H */

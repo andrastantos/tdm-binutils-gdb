@@ -29,6 +29,37 @@
 #include "elf-bfd.h"
 #include "elf/tdm.h"
 
+/* Apply R_TDM_BYTEPTR16 outside the linker (which handles it in
+   tdm_elf_relocate_section): the value is twice the word address of
+   the symbol, plus the addend in octets.  */
+
+static bfd_reloc_status_type
+tdm_elf_byteptr_reloc (bfd *abfd, arelent *reloc_entry, asymbol *symbol,
+		       void *data, asection *input_section, bfd *output_bfd,
+		       char **error_message)
+{
+  bfd_size_type octets;
+  bfd_vma value;
+
+  if (output_bfd != NULL)
+    return bfd_elf_generic_reloc (abfd, reloc_entry, symbol, data,
+				  input_section, output_bfd, error_message);
+
+  if (bfd_is_und_section (symbol->section))
+    return bfd_reloc_undefined;
+
+  octets = reloc_entry->address * bfd_octets_per_byte (abfd, input_section);
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd, input_section,
+				  octets))
+    return bfd_reloc_outofrange;
+
+  value = 2 * (symbol->value + symbol->section->output_section->vma
+	       + symbol->section->output_offset)
+	  + reloc_entry->addend;
+  bfd_put_16 (abfd, value & 0xffff, (bfd_byte *) data + octets);
+  return value > 0xffff ? bfd_reloc_overflow : bfd_reloc_ok;
+}
+
 static reloc_howto_type tdm_elf_howto_table[] =
 {
   /* This reloc does nothing.  */
@@ -108,6 +139,22 @@ static reloc_howto_type tdm_elf_howto_table[] =
 	 0,			/* src_mask */
 	 0x3f,			/* dst_mask */
 	 true),			/* pcrel_offset */
+
+  /* A 16-bit byte pointer: twice the word address of the symbol, plus
+     the addend in octets.  Byte pointers reach the first 32K words.  */
+  HOWTO (R_TDM_BYTEPTR16,	/* type */
+	 0,			/* rightshift */
+	 2,			/* size */
+	 16,			/* bitsize */
+	 false,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_unsigned, /* complain_on_overflow */
+	 tdm_elf_byteptr_reloc,	/* special_function */
+	 "R_TDM_BYTEPTR16",	/* name */
+	 false,			/* partial_inplace */
+	 0,			/* src_mask */
+	 0xffff,		/* dst_mask */
+	 false),		/* pcrel_offset */
 };
 
 /* Map BFD reloc types to TDM ELF reloc types.  */
@@ -125,6 +172,7 @@ static const struct tdm_reloc_map tdm_reloc_map[] =
   { BFD_RELOC_32,		R_TDM_32 },
   { BFD_RELOC_TDM_IMM6,		R_TDM_IMM6 },
   { BFD_RELOC_TDM_PCREL6,	R_TDM_PCREL6 },
+  { BFD_RELOC_TDM_BYTEPTR16,	R_TDM_BYTEPTR16 },
 };
 
 static reloc_howto_type *
@@ -253,11 +301,39 @@ tdm_elf_relocate_section (bfd *output_bfd,
 					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
-	continue;
+	{
+	  /* The generic code adds the output offset of a section to the
+	     addend of a relocation against its section symbol; the addend
+	     of a byte pointer counts octets, so that has to be doubled.  */
+	  if (r_type == R_TDM_BYTEPTR16
+	      && sym != NULL
+	      && ELF_ST_TYPE (sym->st_info) == STT_SECTION)
+	    rel->r_addend += sec->output_offset;
+	  continue;
+	}
 
-      r = _bfd_final_link_relocate (howto, input_bfd, input_section,
-				    contents, rel->r_offset,
-				    relocation, rel->r_addend);
+      if (r_type == R_TDM_BYTEPTR16)
+	{
+	  /* Twice the word address, plus the addend in octets.  The
+	     generic overflow check masks the value to the 16-bit address
+	     width first, which would hide pointers past 32K words.  */
+	  bfd_size_type octets
+	    = rel->r_offset * bfd_octets_per_byte (input_bfd, input_section);
+	  bfd_vma value = 2 * relocation + rel->r_addend;
+
+	  if (!bfd_reloc_offset_in_range (howto, input_bfd, input_section,
+					  octets))
+	    r = bfd_reloc_outofrange;
+	  else
+	    {
+	      bfd_put_16 (input_bfd, value & 0xffff, contents + octets);
+	      r = value > 0xffff ? bfd_reloc_overflow : bfd_reloc_ok;
+	    }
+	}
+      else
+	r = _bfd_final_link_relocate (howto, input_bfd, input_section,
+				      contents, rel->r_offset,
+				      relocation, rel->r_addend);
 
       if (r != bfd_reloc_ok)
 	{
