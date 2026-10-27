@@ -1041,6 +1041,18 @@ value_at_lazy (struct type *type, CORE_ADDR addr, const frame_info_ptr &frame)
   return get_value_at (type, addr, frame, 1);
 }
 
+/* See value.h.  */
+
+struct value *
+value_at_byte_lazy (struct type *type, CORE_ADDR byte_addr)
+{
+  int unit_size = gdbarch_addressable_memory_unit_size (type->arch ());
+  struct value *val = value_at_lazy (type, byte_addr / unit_size);
+
+  val->set_offset (byte_addr % unit_size);
+  return val;
+}
+
 void
 read_value_memory (struct value *val, LONGEST bit_offset,
 		   bool stack, CORE_ADDR memaddr,

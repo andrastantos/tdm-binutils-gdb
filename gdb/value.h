@@ -1143,6 +1143,13 @@ extern struct value *value_at (struct type *type, CORE_ADDR addr);
 extern struct value *value_at_lazy (struct type *type, CORE_ADDR addr,
 				    const frame_info_ptr &frame = nullptr);
 
+/* Like value_at_lazy, but BYTE_ADDR is the position of the value's first
+   byte, counted in bytes (see value::byte_address): with addressable
+   memory units larger than a byte, the value may start inside a unit.  */
+
+extern struct value *value_at_byte_lazy (struct type *type,
+					 CORE_ADDR byte_addr);
+
 /* Like value_at, but ensures that the result is marked not_lval.
    This can be important if the memory is "volatile".  */
 extern struct value *value_at_non_lval (struct type *type, CORE_ADDR addr);

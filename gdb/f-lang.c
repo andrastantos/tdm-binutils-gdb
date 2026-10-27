@@ -293,13 +293,15 @@ public:
   /* Constructor.  TYPE is the type of the slice being loaded from the
      parent value, so this type will correctly reflect the strides required
      to find all of the elements from the parent value.  ADDRESS is the
-     address in target memory of value matching TYPE, and DEST is the value
-     we are repacking into.  */
+     address in target memory of value matching TYPE, BYTE_ADDRESS the
+     position of its first byte counted in bytes (see
+     value::byte_address), and DEST is the value we are repacking into.  */
   explicit fortran_lazy_array_repacker_impl (struct type *type,
 					     CORE_ADDR address,
+					     CORE_ADDR byte_address,
 					     struct value *dest)
     : fortran_array_repacker_base_impl (dest),
-      m_addr (address)
+      m_byte_addr (byte_address)
   { /* Nothing.  */ }
 
   /* Create a lazy value in target memory representing a single element,
@@ -308,12 +310,14 @@ public:
   void process_element (struct type *elt_type, LONGEST elt_off,
 			LONGEST index, bool last_p)
   {
-    copy_element_to_dest (value_at_lazy (elt_type, m_addr + elt_off));
+    copy_element_to_dest (value_at_byte_lazy (elt_type,
+					      m_byte_addr + elt_off));
   }
 
 private:
-  /* The address in target memory where the parent value starts.  */
-  CORE_ADDR m_addr;
+  /* The position in target memory where the parent value starts, counted
+     in bytes.  */
+  CORE_ADDR m_byte_addr;
 };
 
 /* A class used by FORTRAN_VALUE_SUBARRAY when repacking Fortran array
@@ -511,13 +515,13 @@ fortran_associated (struct gdbarch *gdbarch, const language_defn *lang,
 	  pointer_stride = pointer_range->bounds ()->bit_stride ();
 	  if (pointer_stride == 0)
 	    pointer_stride
-	      = type_length_units (check_typedef
-				     (pointer_type->target_type ())) * 8;
+	      = check_typedef (pointer_type->target_type ())->length ()
+		* HOST_CHAR_BIT;
 	  target_stride = target_range->bounds ()->bit_stride ();
 	  if (target_stride == 0)
 	    target_stride
-	      = type_length_units (check_typedef
-				     (target_type->target_type ())) * 8;
+	      = check_typedef (target_type->target_type ())->length ()
+		* HOST_CHAR_BIT;
 	  if (pointer_stride != target_stride)
 	    break;
 
@@ -1399,6 +1403,12 @@ fortran_undetermined::value_subarray (value *array,
 		    (is_all_contiguous ? "Yes" : "No"));
     }
 
+  /* Where the slice starts in target memory, counted in bytes.  With
+     addressable memory units larger than a byte, it may start inside a
+     unit.  */
+  int unit_size = gdbarch_addressable_memory_unit_size (array->arch ());
+  CORE_ADDR slice_byte_addr = array->byte_address () + total_offset;
+
   /* Should we repack this array slice?  */
   if (!is_all_contiguous && (repack_array_slices || is_string_p))
     {
@@ -1431,14 +1441,15 @@ fortran_undetermined::value_subarray (value *array,
 	      > check_typedef (array->type ())->length ()))
 	{
 	  fortran_array_walker<fortran_lazy_array_repacker_impl> p
-	    (array_slice_type, array->address () + total_offset, dest);
+	    (array_slice_type, slice_byte_addr / unit_size, slice_byte_addr,
+	     dest);
 	  p.walk ();
 	}
       else
 	{
 	  fortran_array_walker<fortran_array_repacker_impl> p
-	    (array_slice_type, array->address () + total_offset,
-	     total_offset, array, dest);
+	    (array_slice_type, slice_byte_addr / unit_size, total_offset,
+	     array, dest);
 	  p.walk ();
 	}
       array = dest;
@@ -1454,12 +1465,14 @@ fortran_undetermined::value_subarray (value *array,
 	  if (array->lazy ()
 	      || (total_offset + array_slice_type->length ()
 		  > check_typedef (array->type ())->length ()))
-	    array = value_at_lazy (array_slice_type,
-				   array->address () + total_offset);
+	    array = value_at_byte_lazy (array_slice_type, slice_byte_addr);
 	  else
-	    array = value_from_contents_and_address
-	      (array_slice_type, array->contents ().data () + total_offset,
-	       array->address () + total_offset);
+	    {
+	      array = value_from_contents_and_address
+		(array_slice_type, array->contents ().data () + total_offset,
+		 slice_byte_addr / unit_size);
+	      array->set_offset (slice_byte_addr % unit_size);
+	    }
 	}
       else if (!array->lazy ())
 	array = value_from_component (array, array_slice_type, total_offset);
@@ -1987,13 +2000,9 @@ fortran_adjust_dynamic_array_base_address_hack (struct type *type,
       struct type *elt_type = check_typedef (tmp_type->target_type ());
       stride = tmp_type->index_type ()->bounds ()->bit_stride ();
       if (stride == 0)
-	stride = type_length_units (elt_type);
+	stride = elt_type->length ();
       else
-	{
-	  int unit_size
-	    = gdbarch_addressable_memory_unit_size (elt_type->arch ());
-	  stride /= (unit_size * 8);
-	}
+	stride /= HOST_CHAR_BIT;
 
       /* If this dimension is "backward" then figure out the offset
 	 adjustment required to point to the element at the lowest memory
@@ -2005,7 +2014,9 @@ fortran_adjust_dynamic_array_base_address_hack (struct type *type,
       tmp_type = tmp_type->target_type ();
     }
 
-  /* Adjust the address of this object and return it.  */
-  address += total_offset;
-  return address;
+  /* Adjust the address of this object and return it.  TOTAL_OFFSET
+     counts bytes, ADDRESS addressable memory units, which may be larger
+     than a byte.  */
+  int unit_size = gdbarch_addressable_memory_unit_size (type->arch ());
+  return (address * unit_size + total_offset) / unit_size;
 }

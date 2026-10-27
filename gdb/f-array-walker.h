@@ -48,13 +48,9 @@ public:
     struct type *elt_type = check_typedef (type->target_type ());
     m_stride = type->index_type ()->bounds ()->bit_stride ();
     if (m_stride == 0)
-      m_stride = type_length_units (elt_type);
+      m_stride = elt_type->length ();
     else
-      {
-	int unit_size
-	  = gdbarch_addressable_memory_unit_size (elt_type->arch ());
-	m_stride /= (unit_size * 8);
-      }
+      m_stride /= HOST_CHAR_BIT;
   };
 
   /* Get the byte offset for element INDEX within the type we are working
@@ -269,7 +265,11 @@ private:
 
 	    if (is_dynamic_type (elt_type))
 	      {
-		CORE_ADDR e_address = m_address + elt_off;
+		/* M_ADDRESS counts addressable memory units, which may
+		   be larger than a byte.  */
+		int unit_size
+		  = gdbarch_addressable_memory_unit_size (elt_type->arch ());
+		CORE_ADDR e_address = m_address + elt_off / unit_size;
 		elt_type = resolve_dynamic_type (elt_type, {}, e_address);
 	      }
 
