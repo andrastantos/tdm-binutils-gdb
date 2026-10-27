@@ -182,14 +182,17 @@ value_subscript (struct value *array, LONGEST index)
       /* Do not try to dereference a pointer to an unavailable value.
 	 Instead mock up a new one and give it the original address.  */
       struct type *elt_type = check_typedef (tarray->target_type ());
-      LONGEST elt_size = type_length_units (elt_type);
+      LONGEST elt_size = elt_type->length ();
       if (!array->lazy ()
 	  && !array->bytes_available (elt_size * index, elt_size))
 	{
+	  int unit_size = gdbarch_addressable_memory_unit_size (array->arch ());
+	  CORE_ADDR byte_addr = array->byte_address () + elt_size * index;
 	  struct value *val = value::allocate (elt_type);
 	  val->mark_bytes_unavailable (0, elt_size);
 	  val->set_lval (lval_memory);
-	  val->set_address (array->address () + elt_size * index);
+	  val->set_address (byte_addr / unit_size);
+	  val->set_offset (byte_addr % unit_size);
 	  return val;
 	}
 
@@ -212,17 +215,12 @@ value_subscripted_rvalue (struct value *array, LONGEST index,
 {
   struct type *array_type = check_typedef (array->type ());
   struct type *elt_type = array_type->target_type ();
-  LONGEST elt_size = type_length_units (elt_type);
+  LONGEST elt_size = elt_type->length ();
 
-  /* Fetch the bit stride and convert it to a byte stride, assuming 8 bits
-     in a byte.  */
+  /* Fetch the bit stride and convert it to a byte stride.  */
   LONGEST stride = array_type->bit_stride ();
   if (stride != 0)
-    {
-      struct gdbarch *arch = elt_type->arch ();
-      int unit_size = gdbarch_addressable_memory_unit_size (arch);
-      elt_size = stride / (unit_size * 8);
-    }
+    elt_size = stride / HOST_CHAR_BIT;
 
   LONGEST elt_offs = elt_size * (index - lowerbound);
   bool array_upper_bound_undefined
@@ -230,7 +228,7 @@ value_subscripted_rvalue (struct value *array, LONGEST index,
 
   if (index < lowerbound
       || (!array_upper_bound_undefined
-	  && elt_offs >= type_length_units (array_type))
+	  && elt_offs >= array_type->length ())
       || (array->lval () != lval_memory && array_upper_bound_undefined))
     {
       if (type_not_associated (array_type))
@@ -1073,8 +1071,7 @@ complex_binop (struct value *arg1, struct value *arg2, enum exp_opcode op)
 static int
 type_length_bits (type *type)
 {
-  int unit_size = gdbarch_addressable_memory_unit_size (type->arch ());
-  return unit_size * 8 * type->length ();
+  return HOST_CHAR_BIT * type->length ();
 }
 
 /* Check whether the RHS value of a shift is valid in C/C++ semantics.

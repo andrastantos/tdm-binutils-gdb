@@ -1151,6 +1151,7 @@ value_assign (struct value *toval, struct value *fromval)
 	CORE_ADDR changed_addr;
 	int changed_len;
 	gdb_byte buffer[sizeof (LONGEST)];
+	gdb::byte_vector unit_buffer;
 
 	if (toval->bitsize ())
 	  {
@@ -1183,9 +1184,29 @@ value_assign (struct value *toval, struct value *fromval)
 	  }
 	else
 	  {
+	    int unit_size
+	      = gdbarch_addressable_memory_unit_size (toval->arch ());
+	    int skip = toval->byte_address () % unit_size;
+	    int len = type->length ();
+
 	    changed_addr = toval->address ();
-	    changed_len = type_length_units (type);
-	    dest_buffer = fromval->contents ().data ();
+	    if (skip == 0 && len % unit_size == 0)
+	      {
+		changed_len = len / unit_size;
+		dest_buffer = fromval->contents ().data ();
+	      }
+	    else
+	      {
+		/* The value starts or ends inside an addressable memory
+		   unit: read the units that hold it, and write them back
+		   with its bytes replaced.  */
+		changed_len = (skip + len + unit_size - 1) / unit_size;
+		unit_buffer.resize (changed_len * unit_size);
+		read_memory (changed_addr, unit_buffer.data (), changed_len);
+		memcpy (unit_buffer.data () + skip,
+			fromval->contents ().data (), len);
+		dest_buffer = unit_buffer.data ();
+	      }
 	  }
 
 	write_memory_with_notification (changed_addr, dest_buffer, changed_len);
@@ -1363,12 +1384,27 @@ value_repeat (struct value *arg1, int count)
 
   val = allocate_repeat_value (arg1->enclosing_type (), count);
 
+  /* With addressable memory units larger than a byte, ARG1 may start
+     inside a unit; its offset says where.  */
+  int unit_size = gdbarch_addressable_memory_unit_size (val->arch ());
+  int skip = arg1->byte_address () % unit_size;
+  LONGEST len = val->enclosing_type ()->length ();
+
   val->set_lval (lval_memory);
   val->set_address (arg1->address ());
+  val->set_offset (skip);
 
-  read_value_memory (val, 0, val->stack (), val->address (),
-		     val->contents_all_raw ().data (),
-		     type_length_units (val->enclosing_type ()));
+  if (skip == 0 && len % unit_size == 0)
+    read_value_memory (val, 0, val->stack (), val->address (),
+		       val->contents_all_raw ().data (), len / unit_size);
+  else
+    {
+      int units = (skip + len + unit_size - 1) / unit_size;
+      gdb::byte_vector buf (units * unit_size);
+
+      read_memory (val->address (), buf.data (), units);
+      memcpy (val->contents_all_raw ().data (), buf.data () + skip, len);
+    }
 
   return val;
 }
@@ -1694,10 +1730,10 @@ value_array (int lowbound, gdb::array_view<struct value *> elemvec)
   if (elemvec.empty ())
     error (_("size of the array element must not be zero"));
 
-  typelength = type_length_units (elemvec[0]->enclosing_type ());
+  typelength = elemvec[0]->enclosing_type ()->length ();
   for (struct value *other : elemvec.slice (1))
     {
-      if (type_length_units (other->enclosing_type ()) != typelength)
+      if (other->enclosing_type ()->length () != typelength)
 	{
 	  error (_("array elements must all be the same size"));
 	}
@@ -4065,8 +4101,7 @@ value_slice (struct value *array, LONGEST lowbound, LONGEST length)
     else
       {
 	slice = value::allocate (slice_type);
-	array->contents_copy (slice, 0, offset,
-			      type_length_units (slice_type));
+	array->contents_copy (slice, 0, offset, slice_type->length ());
       }
 
     slice->set_component_location (array);

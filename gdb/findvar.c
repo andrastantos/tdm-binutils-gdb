@@ -582,7 +582,7 @@ read_frame_register_value (value *value)
   LONGEST offset = 0;
   LONGEST reg_offset = value->offset ();
   int regnum = value->regnum ();
-  int len = type_length_units (check_typedef (value->type ()));
+  int len = check_typedef (value->type ())->length ();
 
   /* Skip registers wholly inside of REG_OFFSET.  */
   while (reg_offset >= register_size (gdbarch, regnum))
@@ -595,7 +595,7 @@ read_frame_register_value (value *value)
   while (len > 0)
     {
       struct value *regval = frame_unwind_register_value (next_frame, regnum);
-      int reg_len = type_length_units (regval->type ()) - reg_offset;
+      int reg_len = regval->type ()->length () - reg_offset;
 
       /* If the register length is larger than the number of bytes
 	 remaining to copy, then only copy the appropriate bytes.  */
