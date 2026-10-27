@@ -1972,7 +1972,10 @@ cooked_read_test (struct gdbarch *gdbarch)
       SELF_CHECK (REG_VALID == readwrite.cooked_read (regnum, inner_buf));
       SELF_CHECK (mockctx.mock_target.fetch_registers_called == 0);
       SELF_CHECK (mockctx.mock_target.store_registers_called == 0);
-      SELF_CHECK (mockctx.mock_target.xfer_partial_called == 0);
+      /* TDM's pseudo registers are memory words.  */
+      if (regnum < gdbarch_num_regs (gdbarch)
+	  || gdbarch_bfd_arch_info (gdbarch)->arch != bfd_arch_tdm)
+	SELF_CHECK (mockctx.mock_target.xfer_partial_called == 0);
 
       mockctx.mock_target.reset ();
     }
@@ -2041,7 +2044,10 @@ cooked_read_test (struct gdbarch *gdbarch)
 
       SELF_CHECK (mockctx.mock_target.fetch_registers_called == 0);
       SELF_CHECK (mockctx.mock_target.store_registers_called == 0);
-      SELF_CHECK (mockctx.mock_target.xfer_partial_called == 0);
+      /* TDM's pseudo registers are memory words.  */
+      if (regnum < gdbarch_num_regs (gdbarch)
+	  || gdbarch_bfd_arch_info (gdbarch)->arch != bfd_arch_tdm)
+	SELF_CHECK (mockctx.mock_target.xfer_partial_called == 0);
 
       mockctx.mock_target.reset ();
     }
@@ -2112,9 +2118,10 @@ cooked_write_test (struct gdbarch *gdbarch)
 		  && (bfd_arch == bfd_arch_xtensa
 		      || bfd_arch == bfd_arch_bfin
 		      || bfd_arch == bfd_arch_m32c
-		      /* m68hc11 pseudo registers are in memory.  */
+		      /* m68hc11 and TDM pseudo registers are in memory.  */
 		      || bfd_arch == bfd_arch_m68hc11
 		      || bfd_arch == bfd_arch_m68hc12
+		      || bfd_arch == bfd_arch_tdm
 		      || bfd_arch == bfd_arch_s390))
 	      || (bfd_arch == bfd_arch_frv
 		  /* FRV pseudo registers except iacc0.  */
