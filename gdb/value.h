@@ -361,8 +361,18 @@ public:
   /* If lval == lval_memory, return the address in the inferior.  If
      lval == lval_register, return the byte offset into the registers
      structure.  Otherwise, return 0.  The returned address
-     includes the offset, if any.  */
+     includes the offset, if any.
+
+     With addressable memory units larger than a byte, the address is
+     that of the unit holding the value's first byte; see
+     byte_address.  */
   CORE_ADDR address () const;
+
+  /* If lval == lval_memory, return the address of the value's first
+     byte, counted in bytes: its address in addressable memory units
+     times their size, plus the offset.  It differs from address only
+     when the units are larger than a byte.  */
+  CORE_ADDR byte_address () const;
 
   /* Like address, except the result does not include value's
      offset.  */
@@ -725,9 +735,8 @@ private:
     } computed;
   } m_location {};
 
-  /* Describes offset of a value within lval of a structure in target
-     addressable memory units.  Note also the member embedded_offset
-     below.  */
+  /* Describes offset of a value within lval of a structure in bytes.
+     Note also the member embedded_offset below.  */
   LONGEST m_offset = 0;
 
   /* Only used for bitfields; number of bits contained in them.  */
@@ -776,14 +785,14 @@ private:
 
      When we store the entire object, `enclosing_type' is the run-time
      type -- the complete object -- and `embedded_offset' is the
-     offset of `type' within that larger type, in target addressable memory
-     units.  The contents() method takes `embedded_offset' into account,
+     offset of `type' within that larger type, in bytes.  The contents()
+     method takes `embedded_offset' into account,
      so most GDB code continues to see the `type' portion of the value, just
      as the inferior would.
 
      If `type' is a pointer to an object, then `enclosing_type' is a
      pointer to the object's run-time type, and `pointed_to_offset' is
-     the offset in target addressable memory units from the full object
+     the offset in bytes from the full object
      to the pointed-to object -- that is, the value `embedded_offset' would
      have if we followed the pointer and fetched the complete object.
      (I don't really see the point.  Why not just determine the
@@ -875,7 +884,7 @@ private:
   void ranges_copy_adjusted (struct value *dst, int dst_bit_offset,
 			     int src_bit_offset, int bit_length) const;
 
-  /* Copy LENGTH target addressable memory units of this value's (all)
+  /* Copy LENGTH bytes of this value's (all)
      contents (value_contents_all) starting at SRC_OFFSET, into DST
      value's (all) contents, starting at DST_OFFSET.  If unavailable
      contents are being copied from this, the corresponding DST

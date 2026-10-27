@@ -1059,13 +1059,10 @@ value::allocate_optimized_out (struct type *type)
 gdb::array_view<gdb_byte>
 value::contents_raw ()
 {
-  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
-
   allocate_contents (true);
 
   ULONGEST length = type ()->length ();
-  return gdb::make_array_view
-    (m_contents.get () + m_embedded_offset * unit_size, length);
+  return gdb::make_array_view (m_contents.get () + m_embedded_offset, length);
 }
 
 gdb::array_view<gdb_byte>
@@ -1225,7 +1222,6 @@ value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
 			  LONGEST src_offset, LONGEST length)
 {
   LONGEST src_bit_offset, dst_bit_offset, bit_length;
-  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
 
   /* A lazy DST would make that this copy operation useless, since as
      soon as DST's contents were un-lazied (by a later value_contents
@@ -1245,22 +1241,20 @@ value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
   gdb_assert (!dst->bits_any_optimized_out (TARGET_CHAR_BIT * dst_offset,
 					    TARGET_CHAR_BIT * length));
 
-  if ((src_offset + copy_length) * unit_size > enclosing_type ()-> length ())
+  if (src_offset + copy_length > enclosing_type ()-> length ())
     error (_("access outside bounds of object"));
 
   /* Copy the data.  */
   gdb::array_view<gdb_byte> dst_contents
-    = dst->contents_all_raw ().slice (dst_offset * unit_size,
-				      copy_length * unit_size);
+    = dst->contents_all_raw ().slice (dst_offset, copy_length);
   gdb::array_view<const gdb_byte> src_contents
-    = contents_all_raw ().slice (src_offset * unit_size,
-				 copy_length * unit_size);
+    = contents_all_raw ().slice (src_offset, copy_length);
   gdb::copy (src_contents, dst_contents);
 
   /* Copy the meta-data, adjusted.  */
-  src_bit_offset = src_offset * unit_size * HOST_CHAR_BIT;
-  dst_bit_offset = dst_offset * unit_size * HOST_CHAR_BIT;
-  bit_length = length * unit_size * HOST_CHAR_BIT;
+  src_bit_offset = src_offset * HOST_CHAR_BIT;
+  dst_bit_offset = dst_offset * HOST_CHAR_BIT;
+  bit_length = length * HOST_CHAR_BIT;
 
   ranges_copy_adjusted (dst, dst_bit_offset,
 			src_bit_offset, bit_length);
@@ -1427,17 +1421,29 @@ value::address () const
   if (m_lval != lval_memory)
     return 0;
 
+  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
+  return byte_address () / unit_size;
+}
+
+CORE_ADDR
+value::byte_address () const
+{
+  if (m_lval != lval_memory)
+    return 0;
+
+  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
+
   if (m_parent != NULL)
-    return m_parent->address () + m_offset;
+    return m_parent->byte_address () + m_offset;
 
   if (dynamic_prop *dyn_prop = type ()->dyn_prop (DYN_PROP_DATA_LOCATION);
       dyn_prop != nullptr)
     {
       gdb_assert (dyn_prop->is_constant ());
-      return dyn_prop->const_val ();
+      return dyn_prop->const_val () * unit_size;
     }
 
-  return m_location.address + m_offset;
+  return m_location.address * unit_size + m_offset;
 }
 
 CORE_ADDR
@@ -2193,21 +2199,17 @@ set_internalvar_component (struct internalvar *var,
 			   LONGEST bitsize, struct value *newval)
 {
   gdb_byte *addr;
-  struct gdbarch *gdbarch;
-  int unit_size;
 
   switch (var->kind)
     {
     case INTERNALVAR_VALUE:
       addr = var->u.value->contents_writeable ().data ();
-      gdbarch = var->u.value->arch ();
-      unit_size = gdbarch_addressable_memory_unit_size (gdbarch);
 
       if (bitsize)
 	modify_field (var->u.value->type (), addr + offset,
 		      value_as_long (newval), bitpos, bitsize);
       else
-	memcpy (addr + offset * unit_size, newval->contents ().data (),
+	memcpy (addr + offset, newval->contents ().data (),
 		newval->type ()->length ());
       break;
 
@@ -3033,7 +3035,6 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
 {
   struct value *v;
   struct type *type;
-  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
 
   arg_type = check_typedef (arg_type);
   type = arg_type->field (fieldno).type ();
@@ -3122,8 +3123,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
   else
     {
       /* Plain old data member */
-      offset += (arg_type->field (fieldno).loc_bitpos ()
-		 / (HOST_CHAR_BIT * unit_size));
+      offset += arg_type->field (fieldno).loc_bitpos () / HOST_CHAR_BIT;
 
       /* Lazy register values with offsets are not supported.  */
       if (this->lval () == lval_register && lazy ())
@@ -3136,7 +3136,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
 	  v = value::allocate (type);
 	  contents_copy_raw (v, v->embedded_offset (),
 			     embedded_offset () + offset,
-			     type_length_units (type));
+			     type->length ());
 	}
       v->set_offset (this->offset () + offset + embedded_offset ());
     }
@@ -3776,7 +3776,7 @@ value_from_component (struct value *whole, struct type *type, LONGEST offset)
       v = value::allocate (type);
       whole->contents_copy (v, v->embedded_offset (),
 			    whole->embedded_offset () + offset,
-			    type_length_units (type));
+			    type->length ());
     }
   v->set_offset (whole->offset () + offset + whole->embedded_offset ());
   v->set_component_location (whole);
@@ -3970,10 +3970,12 @@ value::fetch_lazy_memory ()
 
   CORE_ADDR addr = address ();
   struct type *type = check_typedef (enclosing_type ());
+  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
 
-  /* Figure out how much we should copy from memory.  Usually, this is just
-     the size of the type, but, for arrays, we might only be loading a
-     small part of the array (this is only done for very large arrays).  */
+  /* Figure out how much we should copy from memory, in bytes.  Usually,
+     this is just the size of the type, but, for arrays, we might only be
+     loading a small part of the array (this is only done for very large
+     arrays).  */
   int len = 0;
   if (m_limited_length > 0)
     {
@@ -3981,13 +3983,25 @@ value::fetch_lazy_memory ()
       len = m_limited_length;
     }
   else if (type->length () > 0)
-    len = type_length_units (type);
+    len = type->length ();
 
   gdb_assert (len >= 0);
 
-  if (len > 0)
+  /* With addressable memory units larger than a byte, the value may
+     start inside a unit or end inside one: read the units that hold it
+     and copy its bytes out of them.  */
+  int skip = byte_address () % unit_size;
+  if (len > 0 && (skip != 0 || len % unit_size != 0))
+    {
+      int units = (skip + len + unit_size - 1) / unit_size;
+      gdb::byte_vector buf (units * unit_size);
+
+      read_memory (addr, buf.data (), units);
+      memcpy (contents_all_raw ().data (), buf.data () + skip, len);
+    }
+  else if (len > 0)
     read_value_memory (this, 0, stack (), addr,
-		       contents_all_raw ().data (), len);
+		       contents_all_raw ().data (), len / unit_size);
 
   /* If only part of an array was loaded, mark the rest as unavailable.  */
   if (m_limited_length > 0)
@@ -4053,7 +4067,7 @@ value::fetch_lazy_register ()
   set_lazy (false);
   new_val->contents_copy (this, embedded_offset (),
 			  new_val->embedded_offset (),
-			  type_length_units (type));
+			  type->length ());
 
   if (frame_debug)
     {
