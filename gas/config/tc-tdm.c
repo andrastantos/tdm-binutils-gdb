@@ -64,12 +64,23 @@ static htab_t opcode_hash_control;
 /* Set while an .octet directive emits its values.  */
 static bool tdm_octet_mode;
 
+/* Whether words need padding in the current section.  The debug
+   sections are addressed in octets: their data (DWARF written by a
+   compiler) puts multi-octet values at any octet.  */
+
+static bool
+tdm_word_section_p (void)
+{
+  return (now_seg != absolute_section
+	  && (bfd_section_flags (now_seg) & SEC_OCTETS) == 0);
+}
+
 /* Pad the current word with a zero octet if it is half full.  */
 
 void
 tdm_pad_octet (void)
 {
-  if (tdm_octet_mode || now_seg == absolute_section)
+  if (tdm_octet_mode || !tdm_word_section_p ())
     return;
   if (frag_now_fix_octets () % OCTETS_PER_BYTE != 0)
     FRAG_APPEND_1_CHAR (0);
@@ -102,7 +113,7 @@ tdm_stringer (int bits_appendzero)
 void
 tdm_frob_label (symbolS *sym)
 {
-  if (now_seg != absolute_section
+  if (tdm_word_section_p ()
       && symbol_get_frag (sym) == frag_now
       && frag_now_fix_octets () % OCTETS_PER_BYTE != 0)
     {

@@ -8713,6 +8713,11 @@ process_section_headers (Filedata * filedata)
 	  break;
 	}
       break;
+
+    case EM_TDM:
+      /* 16-bit addresses, as GCC writes them in .debug_frame.  */
+      eh_addr_size = 2;
+      break;
     }
 
 #define CHECK_ENTSIZE_VALUES(section, i, size32, size64)		\
