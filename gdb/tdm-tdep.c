@@ -61,6 +61,7 @@
 #include "reggroups.h"
 #include "osabi.h"
 #include "dis-asm.h"
+#include "dwarf2/frame.h"
 
 #include "opcode/tdm.h"
 #include "sim/sim-tdm.h"
@@ -71,6 +72,13 @@
 #define TDM_R0_REGNUM	TDM_SIM_R0_REGNUM
 #define TDM_R1_REGNUM	TDM_SIM_R1_REGNUM
 #define TDM_NUM_REGS	TDM_SIM_NUM_REGS
+
+/* The memory registers $mr0..$mr31 are the memory words 0 to 31, which
+   every instruction can reach through its immediate field.  The
+   compiler allocates them like registers, so they are pseudo registers
+   here, read from and written to memory.  */
+#define TDM_MR_REGNUM	TDM_NUM_REGS
+#define TDM_NUM_MR	32
 
 /* Octets in an addressable unit (a word).  */
 #define TDM_UNIT_SIZE	2
@@ -90,7 +98,54 @@ static_assert (ARRAY_SIZE (tdm_register_names) == TDM_NUM_REGS);
 static const char *
 tdm_register_name (struct gdbarch *gdbarch, int regnum)
 {
+  static const char *const mr_names[TDM_NUM_MR] =
+  {
+    "mr0", "mr1", "mr2", "mr3", "mr4", "mr5", "mr6", "mr7",
+    "mr8", "mr9", "mr10", "mr11", "mr12", "mr13", "mr14", "mr15",
+    "mr16", "mr17", "mr18", "mr19", "mr20", "mr21", "mr22", "mr23",
+    "mr24", "mr25", "mr26", "mr27", "mr28", "mr29", "mr30", "mr31"
+  };
+
+  if (regnum >= TDM_MR_REGNUM)
+    return mr_names[regnum - TDM_MR_REGNUM];
   return tdm_register_names[regnum];
+}
+
+/* $mrN is the memory word N, in every frame: a frame that saved it has
+   unwind information that says where.  */
+
+static struct value *
+tdm_pseudo_register_read_value (struct gdbarch *gdbarch,
+				const frame_info_ptr &next_frame, int regnum)
+{
+  value *v = value::allocate_register (next_frame, regnum);
+
+  /* The length is in addressable units.  */
+  if (target_read_memory (regnum - TDM_MR_REGNUM,
+			  v->contents_raw ().data (), 1) != 0)
+    v->mark_bytes_unavailable (0, v->type ()->length ());
+  return v;
+}
+
+static void
+tdm_pseudo_register_write (struct gdbarch *gdbarch,
+			   const frame_info_ptr &next_frame, int regnum,
+			   gdb::array_view<const gdb_byte> buf)
+{
+  write_memory (regnum - TDM_MR_REGNUM, buf.data (), 1);
+}
+
+/* The DWARF register numbers, which GCC uses: $pc, $sp, $r0 and $r1 are
+   0 to 3, as in GDB; $mrN is 4+N.  */
+
+static int
+tdm_dwarf2_reg_to_regnum (struct gdbarch *gdbarch, int reg)
+{
+  if (reg >= 0 && reg <= 3)
+    return TDM_PC_REGNUM + reg;
+  if (reg >= 4 && reg < 4 + TDM_NUM_MR)
+    return TDM_MR_REGNUM + reg - 4;
+  return -1;
 }
 
 static struct type *
@@ -110,7 +165,9 @@ tdm_register_type (struct gdbarch *gdbarch, int regnum)
 }
 
 /* The architectural registers are general registers; the rest is CPU
-   state only the simulator can show.  */
+   state only the simulator can show.  The memory registers are only in
+   "info all-registers": they are memory, which an inferior call must
+   not save and restore.  */
 
 static bool
 tdm_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
@@ -118,6 +175,8 @@ tdm_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 {
   bool general = regnum < TDM_SIM_INTDIS_REGNUM;
 
+  if (regnum >= TDM_MR_REGNUM)
+    return group == all_reggroup;
   if (group == all_reggroup || group == save_reggroup
       || group == restore_reggroup)
     return true;
@@ -390,6 +449,11 @@ tdm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_register_name (gdbarch, tdm_register_name);
   set_gdbarch_register_type (gdbarch, tdm_register_type);
   set_gdbarch_register_reggroup_p (gdbarch, tdm_register_reggroup_p);
+  set_gdbarch_num_pseudo_regs (gdbarch, TDM_NUM_MR);
+  set_gdbarch_pseudo_register_read_value (gdbarch,
+					  tdm_pseudo_register_read_value);
+  set_gdbarch_pseudo_register_write (gdbarch, tdm_pseudo_register_write);
+  set_gdbarch_dwarf2_reg_to_regnum (gdbarch, tdm_dwarf2_reg_to_regnum);
 
   set_gdbarch_inner_than (gdbarch, core_addr_lessthan);
   set_gdbarch_skip_prologue (gdbarch, tdm_skip_prologue);
@@ -399,6 +463,10 @@ tdm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   gdbarch_init_osabi (info, gdbarch);
 
+  /* Prefer the compiler's call frame information; analyze the prologue
+     of code without it.  */
+  dwarf2_append_unwinders (gdbarch);
+  frame_base_append_sniffer (gdbarch, dwarf2_frame_base_sniffer);
   frame_base_set_default (gdbarch, &tdm_frame_base);
   frame_unwind_append_unwinder (gdbarch, &tdm_frame_unwind);
 
