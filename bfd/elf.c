@@ -971,6 +971,9 @@ _bfd_elf_make_section_from_shdr (bfd *abfd,
 	      || startswith (name, ".gnu.linkonce.wi.")
 	      || startswith (name, ".zdebug"))
 	    flags |= SEC_DEBUGGING | SEC_ELF_OCTETS;
+	  /* LTO's streamed IR is octets too.  */
+	  else if (startswith (name, ".gnu.lto_"))
+	    flags |= SEC_ELF_OCTETS;
 	  else if (startswith (name, GNU_BUILD_ATTRS_SECTION_NAME)
 		   || startswith (name, ".note.gnu"))
 	    {

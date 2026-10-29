@@ -769,6 +769,7 @@ change_section (const char *name,
       if (   startswith (name, ".debug")
 	  || startswith (name, ".zdebug")
 	  || startswith (name, ".gnu.debuglto_.debug_")
+	  || startswith (name, ".gnu.lto_")
 	  || startswith (name, ".gnu.linkonce.wi.")
 	  || startswith (name, GNU_BUILD_ATTRS_SECTION_NAME)
 	  || startswith (name, ".note.gnu"))
