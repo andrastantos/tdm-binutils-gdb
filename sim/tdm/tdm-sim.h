@@ -30,8 +30,10 @@
 /* Default location of the simulator's stdio/exit device.  */
 #define TDM_STDIO_ADDR		0xffe0
 
-/* Default memory: 32K words of core, all that C data can address.  */
-#define TDM_DEFAULT_MEM_WORDS	0x8000
+/* Default memory: every word below the stdio device, enough for
+   programs linked for either memory layout (ld's elf32tdm and
+   elf32tdm_largemem emulations).  */
+#define TDM_DEFAULT_MEM_WORDS	TDM_STDIO_ADDR
 
 /* Register numbers, as used by the sim register interface.  */
 enum tdm_regnum

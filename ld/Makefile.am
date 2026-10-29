@@ -268,6 +268,7 @@ ALL_EMULATION_SOURCES = \
 	eelf32rx.c \
 	eelf32rx_linux.c \
 	eelf32tdm.c \
+	eelf32tdm_largemem.c \
 	eelf32tilegx.c \
 	eelf32tilegx_be.c \
 	eelf32tilepro.c \

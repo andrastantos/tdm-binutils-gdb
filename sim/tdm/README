@@ -29,8 +29,8 @@ state that software can't see (sim/sim-tdm.h): intdis, the MMU fields
 and access violation bit, the interrupt enable and pending bits, and
 the cycle count.  The debugger accesses physical memory.
 
-Everything else goes to the bus.  By default there's 32K words of memory
-(0x0000..0x7fff, all that C data pointers can reach) and the tdm_stdio device at 0xffe0..0xffe2:
+Everything else goes to the bus.  By default there's memory at
+0x0000..0xffdf, everything below the tdm_stdio device at 0xffe0..0xffe2:
 
   0xffe0  EXIT    write: stop, the value is the exit status
   0xffe1  STDOUT  write: print the low 8 bits
@@ -45,7 +45,7 @@ settings take precedence over the defaults.  The sim core is octet
 addressed: addresses and sizes given to --hw-device and the --memory-*
 options are twice the TDM word address.
 
-  --memory-region 0,0x20000                    64K words of memory
+  --memory-region 0,0x10000                    32K words of memory
   --hw-device "/core/tdm_stdio/reg 0x1ffd0 6"  stdio device at 0xffe8
   --hw-device "/core/tdm_stdio/disabled true"  no stdio device
 

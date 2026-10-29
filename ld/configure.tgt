@@ -909,6 +909,7 @@ sparc*-*-*)		targ_emul=elf32_sparc
 spu-*-elf*)		targ_emul=elf32_spu
 			;;
 tdm-*-*)		targ_emul=elf32tdm
+			targ_extra_emuls=elf32tdm_largemem
 			;;
 tic30-*-*coff*)		targ_emul=tic30coff
 			targ_extra_ofiles=
