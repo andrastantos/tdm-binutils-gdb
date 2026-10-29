@@ -5918,19 +5918,19 @@ lang_check_section_addresses (void)
 	       (bfd_arch_bits_per_address (link_info.output_bfd) - 1)) - 1;
   addr_mask = (addr_mask << 1) + 1;
   for (s = link_info.output_bfd->sections; s != NULL; s = s->next)
-    if ((s->flags & SEC_ALLOC) != 0)
+    if ((s->flags & SEC_ALLOC) != 0 && TO_ADDR (s->size) != 0)
       {
-	s_end = (s->vma + TO_ADDR (s->size)) & addr_mask;
-	if (s_end != 0 && s_end < (s->vma & addr_mask))
+	/* The offset of the section's last address unit, compared with
+	   the room above its start: a section can be larger than the
+	   address space.  */
+	bfd_vma last = TO_ADDR (s->size) - 1;
+
+	if (last > addr_mask - (s->vma & addr_mask))
 	  einfo (_("%X%P: section %s VMA wraps around address space\n"),
 		 s->name);
-	else
-	  {
-	    s_end = (s->lma + TO_ADDR (s->size)) & addr_mask;
-	    if (s_end != 0 && s_end < (s->lma & addr_mask))
-	      einfo (_("%X%P: section %s LMA wraps around address space\n"),
-		     s->name);
-	  }
+	else if (last > addr_mask - (s->lma & addr_mask))
+	  einfo (_("%X%P: section %s LMA wraps around address space\n"),
+		 s->name);
       }
 
   if (bfd_count_sections (link_info.output_bfd) <= 1)

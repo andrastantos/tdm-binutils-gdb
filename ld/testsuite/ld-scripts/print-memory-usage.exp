@@ -28,6 +28,7 @@ if { [istarget mips*-*-*]
      || [istarget spu*-*-*]
      || [istarget pdp11*-*-*]
      || [istarget tic30*-*-*]
+     || [istarget tdm-*-*]
      || [istarget tic54x*-*-*]
      || [is_xcoff_format] } {
     return
