@@ -29,8 +29,8 @@ state that software can't see (sim/sim-tdm.h): intdis, the MMU fields
 and access violation bit, the interrupt enable and pending bits, and
 the cycle count.  The debugger accesses physical memory.
 
-Everything else goes to the bus.  By default there's 16K words of memory
-(0x0000..0x3fff) and the tdm_stdio device at 0xffe0..0xffe2:
+Everything else goes to the bus.  By default there's 32K words of memory
+(0x0000..0x7fff, all that C data pointers can reach) and the tdm_stdio device at 0xffe0..0xffe2:
 
   0xffe0  EXIT    write: stop, the value is the exit status
   0xffe1  STDOUT  write: print the low 8 bits
