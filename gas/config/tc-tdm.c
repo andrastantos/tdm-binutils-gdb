@@ -532,6 +532,21 @@ md_assemble (char *str)
     }
   mnemonic[len < sizeof (mnemonic) ? len : sizeof (mnemonic) - 1] = 0;
 
+  /* The ISA has no NOP: XOR a register with 0.  */
+  if (strcmp (mnemonic, "nop") == 0)
+    {
+      char xor_r0[] = "xor $r0, 0";
+
+      s = skip_space (str + len);
+      if (!is_end_of_stmt (*s))
+	{
+	  as_bad (_("junk at end of line: `%s'"), s);
+	  return;
+	}
+      md_assemble (xor_r0);
+      return;
+    }
+
   opcode = len < sizeof (mnemonic)
 	   ? str_hash_find (opcode_hash_control, mnemonic) : NULL;
   if (opcode == NULL)
