@@ -211,6 +211,10 @@ A breakpoint, for debuggers and simulators.  Binary operations with a
 memory destination but an immediate second operand do nothing, so their
 encodings (@code{0b0xxx_1_111_xxxxxxxx}) are reserved for @code{brk}.
 The assembler emits @code{0x1f00} plus @var{n} (0 to 255, default 0).
+
+@item nop
+No operation.  The ISA has none: the assembler emits
+@code{xor $r0, 0}.
 @end table
 
 @node TDM Relocations
