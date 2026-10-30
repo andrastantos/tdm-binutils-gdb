@@ -42,6 +42,7 @@
 #include "as.h"
 #include "safe-ctype.h"
 #include "dwarf2dbg.h"
+#include "subsegs.h"
 #include "opcode/tdm.h"
 #include "elf/tdm.h"
 
@@ -75,6 +76,50 @@ tdm_word_section_p (void)
 	  && (bfd_section_flags (now_seg) & SEC_OCTETS) == 0);
 }
 
+/* The octet in its word that the current frag starts at.  A frag
+   doesn't necessarily start at a word: one of fixed size ends where
+   its memory filled up, which a long string can do at any octet.
+   Count from the start of the subsection, or from the end of a frag
+   of another kind, which aligns (to words at least).  The answer for
+   the frag last asked about is kept, as the frags mostly grow from
+   it.  */
+
+static unsigned int
+tdm_frag_start_octet (void)
+{
+  static fragS *known_frag;
+  static unsigned int known_octet;
+  fragS *f = known_frag;
+  unsigned int octet = known_octet;
+
+  if (f == frag_now)
+    return known_octet;
+  while (f != NULL && f != frag_now)
+    {
+      octet = (f->fr_type == rs_fill
+	       ? octet + f->fr_fix + f->fr_var * f->fr_offset : 0);
+      f = f->fr_next;
+    }
+  if (f == NULL)
+    {
+      octet = 0;
+      for (f = frchain_now->frch_root; f != frag_now; f = f->fr_next)
+	octet = (f->fr_type == rs_fill
+		 ? octet + f->fr_fix + f->fr_var * f->fr_offset : 0);
+    }
+  known_frag = frag_now;
+  known_octet = octet % OCTETS_PER_BYTE;
+  return known_octet;
+}
+
+/* The current octet, counted from the word that the frag starts in.  */
+
+static unsigned int
+tdm_frag_octets (void)
+{
+  return tdm_frag_start_octet () + frag_now_fix_octets ();
+}
+
 /* Pad the current word with a zero octet if it is half full.  */
 
 void
@@ -82,7 +127,7 @@ tdm_pad_octet (void)
 {
   if (tdm_octet_mode || !tdm_word_section_p ())
     return;
-  if (frag_now_fix_octets () % OCTETS_PER_BYTE != 0)
+  if (tdm_frag_octets () % OCTETS_PER_BYTE != 0)
     FRAG_APPEND_1_CHAR (0);
 }
 
@@ -107,18 +152,21 @@ tdm_stringer (int bits_appendzero)
 }
 
 /* A label at a half full word would get the address of the word it
-   shares with the preceding octet; move it to the next word.  This
-   replaces obj_frob_label, so it also records the label for DWARF.  */
+   shares with the preceding octet; move it to the next word.  The
+   value of a label counts words from the word its frag starts in,
+   which differs from what colon gave it in a frag that starts in the
+   middle of a word.  This replaces obj_frob_label, so it also records
+   the label for DWARF.  */
 
 void
 tdm_frob_label (symbolS *sym)
 {
-  if (tdm_word_section_p ()
-      && symbol_get_frag (sym) == frag_now
-      && frag_now_fix_octets () % OCTETS_PER_BYTE != 0)
+  if (tdm_word_section_p () && symbol_get_frag (sym) == frag_now)
     {
-      FRAG_APPEND_1_CHAR (0);
-      S_SET_VALUE (sym, frag_now_fix ());
+      if (tdm_frag_octets () % OCTETS_PER_BYTE != 0)
+	FRAG_APPEND_1_CHAR (0);
+      symbol_set_frag (sym, frag_now);
+      S_SET_VALUE (sym, tdm_frag_octets () / OCTETS_PER_BYTE);
     }
   dwarf2_emit_label (sym);
 }
