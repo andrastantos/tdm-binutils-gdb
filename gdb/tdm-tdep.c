@@ -83,6 +83,9 @@
 /* Octets in an addressable unit (a word).  */
 #define TDM_UNIT_SIZE	2
 
+/* The address class of word pointers, see tdm_word_pointer_p.  */
+#define TDM_WORD_POINTER TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1
+
 /* Limit the instructions examined when analyzing a function.  */
 #define TDM_MAX_ANALYSIS 4096
 
@@ -156,7 +159,9 @@ tdm_register_type (struct gdbarch *gdbarch, int regnum)
     case TDM_PC_REGNUM:
       return builtin_type (gdbarch)->builtin_func_ptr;
     case TDM_SP_REGNUM:
-      return builtin_type (gdbarch)->builtin_data_ptr;
+      return make_type_with_address_space (builtin_type (gdbarch)
+					   ->builtin_data_ptr,
+					   TDM_WORD_POINTER);
     case TDM_SIM_CYCLES_REGNUM:
       return builtin_type (gdbarch)->builtin_uint64;
     default:
@@ -191,6 +196,49 @@ static int
 tdm_addressable_memory_unit_size (struct gdbarch *gdbarch)
 {
   return TDM_UNIT_SIZE;
+}
+
+/* C data pointers are byte (octet) addresses: twice the address of the
+   word, plus one for its high octet.  Code pointers are word addresses,
+   and so is the stack pointer, whose type has the address class "word"
+   (written "@word").  */
+
+static bool
+tdm_word_pointer_p (struct type *type)
+{
+  if (type->instance_flags () & TDM_WORD_POINTER)
+    return true;
+
+  struct type *target = check_typedef (type->target_type ());
+  return (target->code () == TYPE_CODE_FUNC
+	  || target->code () == TYPE_CODE_METHOD);
+}
+
+static CORE_ADDR
+tdm_pointer_to_byte_address (struct gdbarch *gdbarch, struct type *type,
+			     const gdb_byte *buf)
+{
+  CORE_ADDR addr = unsigned_pointer_to_address (gdbarch, type, buf);
+
+  return tdm_word_pointer_p (type) ? addr * TDM_UNIT_SIZE : addr;
+}
+
+static const char *
+tdm_address_class_type_flags_to_name (struct gdbarch *gdbarch,
+				      type_instance_flags flags)
+{
+  return (flags & TDM_WORD_POINTER) ? "word" : NULL;
+}
+
+static bool
+tdm_address_class_name_to_type_flags (struct gdbarch *gdbarch,
+				      const char *name,
+				      type_instance_flags *flags)
+{
+  if (strcmp (name, "word") != 0)
+    return false;
+  *flags = TDM_WORD_POINTER;
+  return true;
 }
 
 /* BRK: the canonical breakpoint instruction.  */
@@ -441,6 +489,11 @@ tdm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_bit (gdbarch, 32);
   set_gdbarch_long_long_bit (gdbarch, 64);
   set_gdbarch_ptr_bit (gdbarch, 16);
+  set_gdbarch_pointer_to_byte_address (gdbarch, tdm_pointer_to_byte_address);
+  set_gdbarch_address_class_type_flags_to_name
+    (gdbarch, tdm_address_class_type_flags_to_name);
+  set_gdbarch_address_class_name_to_type_flags
+    (gdbarch, tdm_address_class_name_to_type_flags);
   set_gdbarch_addr_bit (gdbarch, 16);
 
   set_gdbarch_num_regs (gdbarch, TDM_NUM_REGS);
