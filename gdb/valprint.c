@@ -2149,6 +2149,20 @@ val_print_string (struct type *elttype, const char *encoding,
 		  struct ui_file *stream,
 		  const struct value_print_options *options)
 {
+  int unit_size = gdbarch_addressable_memory_unit_size (elttype->arch ());
+
+  return val_print_string_bytes (elttype, encoding, addr * unit_size, len,
+				 stream, options);
+}
+
+/* See value.h.  */
+
+int
+val_print_string_bytes (struct type *elttype, const char *encoding,
+			CORE_ADDR addr, int len,
+			struct ui_file *stream,
+			const struct value_print_options *options)
+{
   int force_ellipsis = 0;	/* Force ellipsis to be printed if nonzero.  */
   int err;			/* Non-zero if we got a bad read.  */
   int found_nul;		/* Non-zero if we found the nul char.  */
@@ -2172,8 +2186,8 @@ val_print_string (struct type *elttype, const char *encoding,
 		? print_max_chars
 		: std::min ((unsigned) len, print_max_chars));
 
-  err = target_read_string (addr, len, width, fetchlimit,
-			    &buffer, &bytes_read);
+  err = target_read_string_bytes (addr, len, width, fetchlimit,
+				  &buffer, &bytes_read);
 
   addr += bytes_read;
 
@@ -2196,7 +2210,7 @@ val_print_string (struct type *elttype, const char *encoding,
 
       peekbuf = (gdb_byte *) alloca (width);
 
-      if (target_read_memory (addr, peekbuf, width) == 0
+      if (target_read_memory_bytes (addr, peekbuf, width) == 0
 	  && extract_unsigned_integer (peekbuf, width, byte_order) != 0)
 	force_ellipsis = 1;
     }
@@ -2218,7 +2232,9 @@ val_print_string (struct type *elttype, const char *encoding,
 
   if (err != 0)
     {
-      std::string str = memory_error_message (TARGET_XFER_E_IO, gdbarch, addr);
+      int unit_size = gdbarch_addressable_memory_unit_size (gdbarch);
+      std::string str = memory_error_message (TARGET_XFER_E_IO, gdbarch,
+					      addr / unit_size);
 
       gdb_printf (stream, _("<error: %ps>"),
 		  styled_string (metadata_style.style (),

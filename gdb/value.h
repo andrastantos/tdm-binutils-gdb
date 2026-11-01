@@ -1624,6 +1624,14 @@ extern int val_print_string (struct type *elttype, const char *encoding,
 			     struct ui_file *stream,
 			     const struct value_print_options *options);
 
+/* Like val_print_string, but ADDR is an address in bytes rather than
+   addressable memory units, which can be bigger.  */
+
+extern int val_print_string_bytes (struct type *elttype, const char *encoding,
+				   CORE_ADDR addr, int len,
+				   struct ui_file *stream,
+				   const struct value_print_options *options);
+
 /* Print the value in stack frame FRAME of a variable specified by a
    struct symbol.  STREAM is the ui_file on which to print the value.
    INDENT specifies the number of indent levels to print before

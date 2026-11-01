@@ -299,7 +299,9 @@ print_bfd_section_info (bfd *abfd, asection *asect, const char *arg,
       CORE_ADDR addr, endaddr;
 
       addr = bfd_section_vma (asect);
-      endaddr = addr + bfd_section_size (asect);
+      /* The size is in octets, addresses count target bytes.  */
+      endaddr = addr + (bfd_section_size (asect)
+			/ bfd_octets_per_byte (abfd, asect));
       print_section_index (abfd, asect, index_digits);
       maint_print_section_info (name, flags, addr, endaddr,
 				asect->filepos, addr_size);

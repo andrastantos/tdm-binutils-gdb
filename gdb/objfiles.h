@@ -371,13 +371,17 @@ struct obj_section
      (vma + size + offset).  */
   CORE_ADDR endaddr () const
   {
-    return this->addr () + bfd_section_size (this->the_bfd_section);
+    return this->addr () + size ();
   }
+
+  /* The size of the section in target bytes (addressable units, which
+     can be bigger than an octet), like its addresses.  */
+  CORE_ADDR size () const;
 
   /* As endaddr, but returns an unrelocated address.  */
   unrelocated_addr endaddr_unrel () const
   {
-    return this->addr_unrel () + bfd_section_size (this->the_bfd_section);
+    return this->addr_unrel () + size ();
   }
 
   /* True if ADDR is in this obj_section, false otherwise.  */

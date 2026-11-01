@@ -1805,6 +1805,70 @@ target_read_memory (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
     return -1;
 }
 
+/* See target.h.  */
+
+int
+target_read_memory_bytes (CORE_ADDR addr, gdb_byte *myaddr, ssize_t len)
+{
+  int unit_size
+    = gdbarch_addressable_memory_unit_size (current_inferior ()->arch ());
+
+  if (unit_size == 1)
+    return target_read_memory (addr, myaddr, len);
+
+  ssize_t skip = addr % unit_size;
+  ssize_t units = (skip + len + unit_size - 1) / unit_size;
+  gdb::byte_vector buf (units * unit_size);
+
+  if (target_read_memory (addr / unit_size, buf.data (), units) != 0)
+    return -1;
+  memcpy (myaddr, buf.data () + skip, len);
+  return 0;
+}
+
+/* See target.h.  */
+
+int
+target_read_string_bytes (CORE_ADDR addr, int len, int width,
+			  unsigned int fetchlimit,
+			  gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
+			  int *bytes_read)
+{
+  int unit_size
+    = gdbarch_addressable_memory_unit_size (current_inferior ()->arch ());
+
+  if (unit_size == 1)
+    return target_read_string (addr, len, width, fetchlimit, buffer,
+			       bytes_read);
+
+  /* Read character by character: until LEN characters, or the NUL
+     character if LEN is -1, and at most FETCHLIMIT.  */
+  unsigned int limit = (len >= 0 ? std::min ((unsigned int) len, fetchlimit)
+			: fetchlimit);
+  gdb::byte_vector chars;
+  gdb::byte_vector c (width);
+  int errcode = 0;
+
+  for (unsigned int n = 0; n < limit; n++)
+    {
+      if (target_read_memory_bytes (addr + n * width, c.data (), width) != 0)
+	{
+	  errcode = -1;
+	  break;
+	}
+      chars.insert (chars.end (), c.begin (), c.end ());
+      if (len == -1
+	  && std::all_of (c.begin (), c.end (),
+			  [] (gdb_byte b) { return b == 0; }))
+	break;
+    }
+
+  buffer->reset ((gdb_byte *) xmalloc (std::max<size_t> (chars.size (), 1)));
+  memcpy (buffer->get (), chars.data (), chars.size ());
+  *bytes_read = chars.size ();
+  return errcode;
+}
+
 /* See target/target.h.  */
 
 int
