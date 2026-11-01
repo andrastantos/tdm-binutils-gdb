@@ -2733,6 +2733,21 @@ value_as_mpz (struct value *val)
 
 /* Extract a value as a C pointer.  */
 
+/* See value.h.  */
+
+CORE_ADDR
+value_as_byte_address (struct value *val)
+{
+  struct gdbarch *gdbarch = val->type ()->arch ();
+  struct type *type = check_typedef (val->type ());
+
+  if (type->is_pointer_or_reference ())
+    return gdbarch_pointer_to_byte_address (gdbarch, type,
+					    val->contents ().data ());
+  return (value_as_address (val)
+	  * gdbarch_addressable_memory_unit_size (gdbarch));
+}
+
 CORE_ADDR
 value_as_address (struct value *val)
 {

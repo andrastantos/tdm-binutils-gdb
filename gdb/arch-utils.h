@@ -349,6 +349,12 @@ extern std::string default_gcc_target_options (struct gdbarch *gdbarch);
 extern const char *default_gnu_triplet_regexp (struct gdbarch *gdbarch);
 extern int default_addressable_memory_unit_size (struct gdbarch *gdbarch);
 
+/* Default implementation of gdbarch_pointer_to_byte_address: the address
+   from gdbarch_pointer_to_address, in bytes.  */
+extern CORE_ADDR default_pointer_to_byte_address (struct gdbarch *gdbarch,
+						  struct type *type,
+						  const gdb_byte *buf);
+
 extern void default_guess_tracepoint_registers (struct gdbarch *gdbarch,
 						struct regcache *regcache,
 						CORE_ADDR addr);

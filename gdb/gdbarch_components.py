@@ -818,6 +818,20 @@ Method(
 )
 
 Method(
+    comment="""
+Return the address, in bytes rather than addressable memory units, that
+the pointer of type TYPE in BUF points to.  Where a memory unit is bigger
+than a byte, a pointer can address a byte inside a unit.  The default is
+the address from pointer_to_address, in bytes.
+""",
+    type="CORE_ADDR",
+    name="pointer_to_byte_address",
+    params=[("struct type *", "type"), ("const gdb_byte *", "buf")],
+    predefault="default_pointer_to_byte_address",
+    invalid=False,
+)
+
+Method(
     type="CORE_ADDR",
     name="integer_to_address",
     params=[("struct type *", "type"), ("const gdb_byte *", "buf")],

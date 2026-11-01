@@ -422,6 +422,15 @@ using gdbarch_address_to_pointer_ftype = void (struct gdbarch *gdbarch, struct t
 void gdbarch_address_to_pointer (struct gdbarch *gdbarch, struct type *type, gdb_byte *buf, CORE_ADDR addr);
 void set_gdbarch_address_to_pointer (struct gdbarch *gdbarch, gdbarch_address_to_pointer_ftype *address_to_pointer);
 
+/* Return the address, in bytes rather than addressable memory units, that
+   the pointer of type TYPE in BUF points to.  Where a memory unit is bigger
+   than a byte, a pointer can address a byte inside a unit.  The default is
+   the address from pointer_to_address, in bytes. */
+
+using gdbarch_pointer_to_byte_address_ftype = CORE_ADDR (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);
+CORE_ADDR gdbarch_pointer_to_byte_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);
+void set_gdbarch_pointer_to_byte_address (struct gdbarch *gdbarch, gdbarch_pointer_to_byte_address_ftype *pointer_to_byte_address);
+
 bool gdbarch_integer_to_address_p (struct gdbarch *gdbarch);
 
 using gdbarch_integer_to_address_ftype = CORE_ADDR (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);

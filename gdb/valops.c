@@ -1696,6 +1696,7 @@ value_ind (struct value *arg1)
       enc_type = enc_type->target_type ();
 
       CORE_ADDR base_addr;
+      LONGEST byte_offset = 0;
       if (check_typedef (enc_type)->code () == TYPE_CODE_FUNC
 	  || check_typedef (enc_type)->code () == TYPE_CODE_METHOD)
 	{
@@ -1705,11 +1706,18 @@ value_ind (struct value *arg1)
 	}
       else
 	{
-	  /* Retrieve the enclosing object pointed to.  */
-	  base_addr = (value_as_address (arg1)
-		       - arg1->pointed_to_offset ());
+	  /* Retrieve the enclosing object pointed to.  The pointer may
+	     address a byte inside a memory unit.  */
+	  int unit_size
+	    = gdbarch_addressable_memory_unit_size (arg1->arch ());
+	  CORE_ADDR byte_addr = (value_as_byte_address (arg1)
+				 - arg1->pointed_to_offset ());
+	  base_addr = byte_addr / unit_size;
+	  byte_offset = byte_addr % unit_size;
 	}
       arg2 = value_at_lazy (enc_type, base_addr);
+      if (byte_offset != 0)
+	arg2->set_offset (byte_offset);
       enc_type = arg2->type ();
       return readjust_indirect_value_type (arg2, enc_type, base_type,
 					   arg1, base_addr);

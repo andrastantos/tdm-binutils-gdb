@@ -984,6 +984,16 @@ default_gnu_triplet_regexp (struct gdbarch *gdbarch)
   return gdbarch_bfd_arch_info (gdbarch)->arch_name;
 }
 
+/* See arch-utils.h.  */
+
+CORE_ADDR
+default_pointer_to_byte_address (struct gdbarch *gdbarch, struct type *type,
+				 const gdb_byte *buf)
+{
+  return (gdbarch_pointer_to_address (gdbarch, type, buf)
+	  * gdbarch_addressable_memory_unit_size (gdbarch));
+}
+
 /* Default method for gdbarch_addressable_memory_unit_size.  The default is
    based on the bits_per_byte defined in the bfd library for the current
    architecture, this is usually 8-bits, and so this function will usually
