@@ -54,6 +54,7 @@
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "gdbcore.h"
+#include "target.h"
 #include "value.h"
 #include "inferior.h"
 #include "arch-utils.h"
@@ -463,8 +464,37 @@ static const struct frame_base tdm_frame_base =
   tdm_frame_base_address
 };
 
+/* Whether a value of TYPE is returned in memory, as GCC does: if it is
+   bigger than 32 bits, or an aggregate without an integer mode.  An
+   aggregate has one if it is one octet long, or two or four and aligned
+   to a word.  */
+
+static bool
+tdm_return_in_memory_p (struct type *type)
+{
+  int len = type->length ();
+
+  if (len > 4)
+    return true;
+  switch (check_typedef (type)->code ())
+    {
+    case TYPE_CODE_STRUCT:
+    case TYPE_CODE_UNION:
+    case TYPE_CODE_ARRAY:
+      /* type_align counts addressable units, words: a struct of chars has
+	 no known alignment (0).  */
+      if (len == 1)
+	return false;
+      return !((len == 2 || len == 4) && type_align (type) >= 1);
+    default:
+      return false;
+    }
+}
+
 /* Values up to 16 bits are returned in $r0, up to 32 bits in $r1:$r0
-   (low word in $r0).  Larger values aren't supported.  */
+   (low word in $r0).  For a value returned in memory, the caller passes
+   the address of the result as a hidden first argument in $r0, and the
+   callee returns it in $r0: a byte address, as for a C pointer.  */
 
 static enum return_value_convention
 tdm_return_value (struct gdbarch *gdbarch, struct value *function,
@@ -474,10 +504,18 @@ tdm_return_value (struct gdbarch *gdbarch, struct value *function,
   int len = valtype->length ();
   int i;
 
-  if (len > 4 || valtype->code () == TYPE_CODE_STRUCT
-      || valtype->code () == TYPE_CODE_UNION
-      || valtype->code () == TYPE_CODE_ARRAY)
-    return RETURN_VALUE_STRUCT_CONVENTION;
+  if (tdm_return_in_memory_p (valtype))
+    {
+      if (readbuf != nullptr)
+	{
+	  ULONGEST addr;
+
+	  regcache_cooked_read_unsigned (regcache, TDM_R0_REGNUM, &addr);
+	  if (target_read_memory_bytes (addr, readbuf, len) != 0)
+	    memory_error (TARGET_XFER_E_IO, addr / TDM_UNIT_SIZE);
+	}
+      return RETURN_VALUE_ABI_RETURNS_ADDRESS;
+    }
 
   for (i = 0; i * 2 < len; i++)
     {
