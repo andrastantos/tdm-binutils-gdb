@@ -994,6 +994,17 @@ default_pointer_to_byte_address (struct gdbarch *gdbarch, struct type *type,
 	  * gdbarch_addressable_memory_unit_size (gdbarch));
 }
 
+/* See arch-utils.h.  */
+
+void
+default_byte_address_to_pointer (struct gdbarch *gdbarch, struct type *type,
+				 gdb_byte *buf, CORE_ADDR addr)
+{
+  gdbarch_address_to_pointer (gdbarch, type, buf,
+			      addr / gdbarch_addressable_memory_unit_size
+				       (gdbarch));
+}
+
 /* Default method for gdbarch_addressable_memory_unit_size.  The default is
    based on the bits_per_byte defined in the bfd library for the current
    architecture, this is usually 8-bits, and so this function will usually

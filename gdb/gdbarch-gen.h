@@ -431,6 +431,15 @@ using gdbarch_pointer_to_byte_address_ftype = CORE_ADDR (struct gdbarch *gdbarch
 CORE_ADDR gdbarch_pointer_to_byte_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);
 void set_gdbarch_pointer_to_byte_address (struct gdbarch *gdbarch, gdbarch_pointer_to_byte_address_ftype *pointer_to_byte_address);
 
+/* Store in BUF a pointer of type TYPE to the byte at ADDR, an address in
+   bytes rather than addressable memory units: the reverse of
+   pointer_to_byte_address.  The default stores the address of the unit
+   holding that byte with address_to_pointer. */
+
+using gdbarch_byte_address_to_pointer_ftype = void (struct gdbarch *gdbarch, struct type *type, gdb_byte *buf, CORE_ADDR addr);
+void gdbarch_byte_address_to_pointer (struct gdbarch *gdbarch, struct type *type, gdb_byte *buf, CORE_ADDR addr);
+void set_gdbarch_byte_address_to_pointer (struct gdbarch *gdbarch, gdbarch_byte_address_to_pointer_ftype *byte_address_to_pointer);
+
 bool gdbarch_integer_to_address_p (struct gdbarch *gdbarch);
 
 using gdbarch_integer_to_address_ftype = CORE_ADDR (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);

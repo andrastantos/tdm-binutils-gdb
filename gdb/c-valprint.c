@@ -155,12 +155,14 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
     }
 
   if (options->symbol_print)
-    want_space = print_address_demangle (options, gdbarch, address, stream,
-					 demangle);
+    want_space = print_pointer_address_demangle (options, type,
+						 valaddr + embedded_offset,
+						 stream, demangle);
   else if (options->addressprint)
     {
-      fputs_styled (paddress (gdbarch, address), address_style.style (),
-		    stream);
+      fputs_styled (pointer_address_string (type,
+					    valaddr + embedded_offset).c_str (),
+		    address_style.style (), stream);
       want_space = 1;
     }
 

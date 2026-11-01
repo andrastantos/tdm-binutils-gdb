@@ -3622,6 +3622,19 @@ value_from_pointer (struct type *type, CORE_ADDR addr)
   return val;
 }
 
+/* See value.h.  */
+
+struct value *
+value_from_byte_pointer (struct type *type, CORE_ADDR addr)
+{
+  struct value *val = value::allocate (type);
+
+  type = check_typedef (type);
+  gdbarch_byte_address_to_pointer (type->arch (), type,
+				   val->contents_raw ().data (), addr);
+  return val;
+}
+
 /* Create and return a value object of TYPE containing the value D.  The
    TYPE must be of TYPE_CODE_FLT, and must be large enough to hold D once
    it is converted to target format.  */

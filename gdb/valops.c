@@ -1562,8 +1562,8 @@ value_coerce_array (struct value *arg1)
   if (arg1->lval () != lval_memory)
     error (_("Attempt to take address of value not located in memory."));
 
-  return value_from_pointer (lookup_pointer_type (type->target_type ()),
-			     arg1->address ());
+  return value_from_byte_pointer (lookup_pointer_type (type->target_type ()),
+				  arg1->byte_address ());
 }
 
 /* Given a value which is a function, return a value which is a pointer
@@ -1626,9 +1626,9 @@ value_addr (struct value *arg1)
     error (_("Attempt to take address of value not located in memory."));
 
   /* Get target memory address.  */
-  arg2 = value_from_pointer (lookup_pointer_type (arg1->type ()),
-			     (arg1->address ()
-			      + arg1->embedded_offset ()));
+  arg2 = value_from_byte_pointer (lookup_pointer_type (arg1->type ()),
+				  (arg1->byte_address ()
+				   + arg1->embedded_offset ()));
 
   /* This may be a pointer to a base subobject; so remember the
      full derived object's type ...  */
