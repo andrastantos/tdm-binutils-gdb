@@ -1695,7 +1695,7 @@ value_less (struct value *arg1, struct value *arg2)
 				   v2.data (), eff_type_v2) == -1;
     }
   else if (code1 == TYPE_CODE_PTR && code2 == TYPE_CODE_PTR)
-    return value_as_address (arg1) < value_as_address (arg2);
+    return value_as_byte_address (arg1) < value_as_byte_address (arg2);
 
   /* FIXME: Need to promote to either CORE_ADDR or LONGEST, whichever
      is bigger.  */

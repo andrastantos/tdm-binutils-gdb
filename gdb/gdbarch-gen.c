@@ -108,6 +108,7 @@ struct gdbarch
   gdbarch_pointer_to_address_ftype *pointer_to_address = unsigned_pointer_to_address;
   gdbarch_address_to_pointer_ftype *address_to_pointer = unsigned_address_to_pointer;
   gdbarch_pointer_to_byte_address_ftype *pointer_to_byte_address = default_pointer_to_byte_address;
+  gdbarch_byte_address_to_pointer_ftype *byte_address_to_pointer = default_byte_address_to_pointer;
   gdbarch_integer_to_address_ftype *integer_to_address = nullptr;
   gdbarch_return_value_ftype *return_value = nullptr;
   gdbarch_return_value_as_value_ftype *return_value_as_value = default_gdbarch_return_value;
@@ -360,6 +361,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of pointer_to_address, invalid_p == 0.  */
   /* Skip verify of address_to_pointer, invalid_p == 0.  */
   /* Skip verify of pointer_to_byte_address, invalid_p == 0.  */
+  /* Skip verify of byte_address_to_pointer, invalid_p == 0.  */
   /* Skip verify of integer_to_address, has predicate.  */
   /* Skip verify of return_value, invalid_p == 0.  */
   if ((gdbarch->return_value_as_value == default_gdbarch_return_value) == (gdbarch->return_value == nullptr))
@@ -762,6 +764,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: pointer_to_byte_address = <%s>\n",
 	      host_address_to_string (gdbarch->pointer_to_byte_address));
+  gdb_printf (file,
+	      "gdbarch_dump: byte_address_to_pointer = <%s>\n",
+	      host_address_to_string (gdbarch->byte_address_to_pointer));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_integer_to_address_p() = %d\n",
 	      gdbarch_integer_to_address_p (gdbarch));
@@ -2496,6 +2501,23 @@ set_gdbarch_pointer_to_byte_address (struct gdbarch *gdbarch,
 				     gdbarch_pointer_to_byte_address_ftype pointer_to_byte_address)
 {
   gdbarch->pointer_to_byte_address = pointer_to_byte_address;
+}
+
+void
+gdbarch_byte_address_to_pointer (struct gdbarch *gdbarch, struct type *type, gdb_byte *buf, CORE_ADDR addr)
+{
+  gdb_assert (gdbarch != nullptr);
+  gdb_assert (gdbarch->byte_address_to_pointer != nullptr);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_byte_address_to_pointer called\n");
+  gdbarch->byte_address_to_pointer (gdbarch, type, buf, addr);
+}
+
+void
+set_gdbarch_byte_address_to_pointer (struct gdbarch *gdbarch,
+				     gdbarch_byte_address_to_pointer_ftype byte_address_to_pointer)
+{
+  gdbarch->byte_address_to_pointer = byte_address_to_pointer;
 }
 
 bool

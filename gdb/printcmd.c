@@ -780,6 +780,58 @@ print_address_demangle (const struct value_print_options *opts,
 }
 
 
+/* See value.h.  */
+
+std::string
+pointer_address_string (struct type *type, const gdb_byte *valaddr)
+{
+  struct gdbarch *gdbarch = type->arch ();
+
+  if (gdbarch_addressable_memory_unit_size (gdbarch) == 1)
+    return paddress (gdbarch, extract_typed_address (valaddr, type));
+  return hex_string (extract_unsigned_integer (valaddr, type->length (),
+					       type_byte_order (type)));
+}
+
+/* See value.h.  */
+
+int
+print_pointer_address_demangle (const struct value_print_options *opts,
+				struct type *type, const gdb_byte *valaddr,
+				struct ui_file *stream, int do_demangle)
+{
+  struct gdbarch *gdbarch = type->arch ();
+  int unit_size = gdbarch_addressable_memory_unit_size (gdbarch);
+  CORE_ADDR addr = extract_typed_address (valaddr, type);
+
+  if (unit_size == 1)
+    return print_address_demangle (opts, gdbarch, addr, stream, do_demangle);
+
+  CORE_ADDR byte_addr = gdbarch_pointer_to_byte_address (gdbarch, type,
+							 valaddr);
+  std::string name, filename;
+  int unmapped = 0, offset = 0, line = 0;
+  bool have_symbol = !build_address_symbolic (gdbarch, addr, do_demangle,
+					      false, &name, &offset,
+					      &filename, &line, &unmapped);
+
+  if (opts->addressprint)
+    fputs_styled (pointer_address_string (type, valaddr).c_str (),
+		  address_style.style (), stream);
+  if (!have_symbol)
+    return opts->addressprint;
+
+  LONGEST byte_offset = byte_addr - (addr - offset) * unit_size;
+  if (opts->addressprint)
+    gdb_puts (" ", stream);
+  gdb_puts (unmapped ? "<*" : "<", stream);
+  fputs_styled (name.c_str (), function_name_style.style (), stream);
+  if (byte_offset != 0)
+    gdb_printf (stream, "%+d", (int) byte_offset);
+  gdb_puts (unmapped ? "*>" : ">", stream);
+  return 1;
+}
+
 /* Find the address of the instruction that is INST_COUNT instructions before
    the instruction at ADDR.
    Since some architectures have variable-length instructions, we can't just

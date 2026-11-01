@@ -675,5 +675,12 @@ address_from_register (int regnum, const frame_info_ptr &frame)
       error_value_optimized_out ();
     }
 
+  /* Where addressable memory units are bigger than a byte, data
+     pointers may hold byte addresses, but a register in a location
+     expression holds an address in units.  */
+  if (gdbarch_addressable_memory_unit_size (get_frame_arch (frame)) > 1)
+    return extract_unsigned_integer (v->contents ().data (), type->length (),
+				     type_byte_order (type));
+
   return value_as_address (v.get ());
 }

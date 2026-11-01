@@ -410,11 +410,13 @@ val_print_invalid_address (struct ui_file *stream)
    Arguments to this functions are roughly the same as those in
    generic_val_print.  A difference is that ADDRESS is the address to print,
    with embedded_offset already added.  ELTTYPE represents
-   the pointed type after check_typedef.  */
+   the pointed type after check_typedef.  VALADDR holds the pointer, or
+   is null to print a pointer to ADDRESS.  */
 
 static void
 print_unpacked_pointer (struct type *type, struct type *elttype,
-			CORE_ADDR address, struct ui_file *stream,
+			const gdb_byte *valaddr, CORE_ADDR address,
+			struct ui_file *stream,
 			const struct value_print_options *options)
 {
   struct gdbarch *gdbarch = type->arch ();
@@ -427,10 +429,18 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
     }
 
   if (options->symbol_print)
-    print_address_demangle (options, gdbarch, address, stream, demangle);
+    {
+      if (valaddr != nullptr)
+	print_pointer_address_demangle (options, type, valaddr, stream,
+					demangle);
+      else
+	print_address_demangle (options, gdbarch, address, stream, demangle);
+    }
   else if (options->addressprint)
-    fputs_styled (paddress (gdbarch, address), address_style.style (),
-		  stream);
+    fputs_styled ((valaddr != nullptr
+		   ? pointer_address_string (type, valaddr)
+		   : std::string (paddress (gdbarch, address))).c_str (),
+		  address_style.style (), stream);
 }
 
 /* generic_val_print helper for TYPE_CODE_ARRAY.  */
@@ -460,7 +470,7 @@ generic_val_print_array (struct value *val,
   else
     {
       /* Array of unspecified length: treat like pointer to first elt.  */
-      print_unpacked_pointer (type, elttype, val->address (),
+      print_unpacked_pointer (type, elttype, nullptr, val->address (),
 			      stream, options);
     }
 
@@ -530,7 +540,7 @@ generic_val_print_string (struct value *val,
   else
     {
       /* Array of unspecified length: treat like pointer to first elt.  */
-      print_unpacked_pointer (type, elttype, val->address (),
+      print_unpacked_pointer (type, elttype, nullptr, val->address (),
 			      stream, options);
     }
 
@@ -552,7 +562,7 @@ generic_value_print_ptr (struct value *val, struct ui_file *stream,
       const gdb_byte *valaddr = val->contents_for_printing ().data ();
       CORE_ADDR addr = unpack_pointer (type, valaddr);
 
-      print_unpacked_pointer (type, elttype, addr, stream, options);
+      print_unpacked_pointer (type, elttype, valaddr, addr, stream, options);
     }
 }
 

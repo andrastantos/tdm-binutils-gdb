@@ -832,6 +832,20 @@ the address from pointer_to_address, in bytes.
 )
 
 Method(
+    comment="""
+Store in BUF a pointer of type TYPE to the byte at ADDR, an address in
+bytes rather than addressable memory units: the reverse of
+pointer_to_byte_address.  The default stores the address of the unit
+holding that byte with address_to_pointer.
+""",
+    type="void",
+    name="byte_address_to_pointer",
+    params=[("struct type *", "type"), ("gdb_byte *", "buf"), ("CORE_ADDR", "addr")],
+    predefault="default_byte_address_to_pointer",
+    invalid=False,
+)
+
+Method(
     type="CORE_ADDR",
     name="integer_to_address",
     params=[("struct type *", "type"), ("const gdb_byte *", "buf")],

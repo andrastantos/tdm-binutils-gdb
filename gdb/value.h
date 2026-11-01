@@ -1064,6 +1064,23 @@ extern int print_address_demangle (const struct value_print_options *,
 				   struct gdbarch *, CORE_ADDR,
 				   struct ui_file *, int);
 
+/* Print the data pointer of type TYPE in VALADDR like
+   print_address_demangle.  Where an addressable memory unit is bigger
+   than a byte, a pointer can address a byte inside a unit: print the
+   value of the pointer, and the offset from a symbol in bytes.  */
+
+extern int print_pointer_address_demangle (const struct value_print_options *,
+					   struct type *type,
+					   const gdb_byte *valaddr,
+					   struct ui_file *, int);
+
+/* The address the data pointer of type TYPE in VALADDR points to, for
+   printing: as paddress, or the value of the pointer where it can
+   address a byte inside an addressable memory unit.  */
+
+extern std::string pointer_address_string (struct type *type,
+					   const gdb_byte *valaddr);
+
 /* Returns true if VAL is of floating-point type.  In addition,
    throws an error if the value is an invalid floating-point value.  */
 extern bool is_floating_value (struct value *val);
@@ -1132,6 +1149,13 @@ extern void pack_long (gdb_byte *buf, struct type *type, LONGEST num);
 extern struct value *value_from_longest (struct type *type, LONGEST num);
 extern struct value *value_from_ulongest (struct type *type, ULONGEST num);
 extern struct value *value_from_pointer (struct type *type, CORE_ADDR addr);
+
+/* Like value_from_pointer, but ADDR is an address in bytes rather than
+   addressable memory units: the pointer can address a byte inside a unit
+   (see gdbarch_byte_address_to_pointer).  */
+
+extern struct value *value_from_byte_pointer (struct type *type,
+					      CORE_ADDR addr);
 extern struct value *value_from_host_double (struct type *type, double d);
 extern struct value *value_from_history_ref (const char *, const char **);
 extern struct value *value_from_component (struct value *, struct type *,

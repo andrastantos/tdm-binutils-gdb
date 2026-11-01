@@ -355,6 +355,12 @@ extern CORE_ADDR default_pointer_to_byte_address (struct gdbarch *gdbarch,
 						  struct type *type,
 						  const gdb_byte *buf);
 
+/* Default implementation of gdbarch_byte_address_to_pointer: a pointer
+   to the unit holding the byte, with gdbarch_address_to_pointer.  */
+extern void default_byte_address_to_pointer (struct gdbarch *gdbarch,
+					     struct type *type, gdb_byte *buf,
+					     CORE_ADDR addr);
+
 extern void default_guess_tracepoint_registers (struct gdbarch *gdbarch,
 						struct regcache *regcache,
 						CORE_ADDR addr);
