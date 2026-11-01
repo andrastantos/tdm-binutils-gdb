@@ -215,12 +215,39 @@ tdm_word_pointer_p (struct type *type)
 }
 
 static CORE_ADDR
+tdm_pointer_to_address (struct gdbarch *gdbarch, struct type *type,
+			const gdb_byte *buf)
+{
+  CORE_ADDR addr = unsigned_pointer_to_address (gdbarch, type, buf);
+
+  return tdm_word_pointer_p (type) ? addr : addr / TDM_UNIT_SIZE;
+}
+
+static void
+tdm_address_to_pointer (struct gdbarch *gdbarch, struct type *type,
+			gdb_byte *buf, CORE_ADDR addr)
+{
+  if (!tdm_word_pointer_p (type))
+    addr *= TDM_UNIT_SIZE;
+  unsigned_address_to_pointer (gdbarch, type, buf, addr);
+}
+
+static CORE_ADDR
 tdm_pointer_to_byte_address (struct gdbarch *gdbarch, struct type *type,
 			     const gdb_byte *buf)
 {
   CORE_ADDR addr = unsigned_pointer_to_address (gdbarch, type, buf);
 
   return tdm_word_pointer_p (type) ? addr * TDM_UNIT_SIZE : addr;
+}
+
+static void
+tdm_byte_address_to_pointer (struct gdbarch *gdbarch, struct type *type,
+			     gdb_byte *buf, CORE_ADDR addr)
+{
+  if (tdm_word_pointer_p (type))
+    addr /= TDM_UNIT_SIZE;
+  unsigned_address_to_pointer (gdbarch, type, buf, addr);
 }
 
 static const char *
@@ -489,7 +516,10 @@ tdm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_bit (gdbarch, 32);
   set_gdbarch_long_long_bit (gdbarch, 64);
   set_gdbarch_ptr_bit (gdbarch, 16);
+  set_gdbarch_pointer_to_address (gdbarch, tdm_pointer_to_address);
+  set_gdbarch_address_to_pointer (gdbarch, tdm_address_to_pointer);
   set_gdbarch_pointer_to_byte_address (gdbarch, tdm_pointer_to_byte_address);
+  set_gdbarch_byte_address_to_pointer (gdbarch, tdm_byte_address_to_pointer);
   set_gdbarch_address_class_type_flags_to_name
     (gdbarch, tdm_address_class_type_flags_to_name);
   set_gdbarch_address_class_name_to_type_flags
