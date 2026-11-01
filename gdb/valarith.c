@@ -37,8 +37,9 @@ static struct value *value_subscripted_rvalue (struct value *array,
 					       LONGEST index,
 					       LONGEST lowerbound);
 
-/* Given a pointer, return the size of its target.
-   If the pointer type is void *, then return 1.
+/* Given a pointer, return the size of its target in bytes (rather
+   than addressable memory units: a pointer can address a byte inside a
+   unit).  If the pointer type is void *, then return 1.
    If the target type is incomplete, then error out.
    This isn't a general purpose function, but just a
    helper for value_ptradd.  */
@@ -52,10 +53,10 @@ find_size_for_pointer_math (struct type *ptr_type)
   gdb_assert (ptr_type->code () == TYPE_CODE_PTR);
   ptr_target = check_typedef (ptr_type->target_type ());
 
-  sz = type_length_units (ptr_target);
+  sz = ptr_target->length ();
   if (sz == 0)
     {
-      if (ptr_type->code () == TYPE_CODE_VOID)
+      if (ptr_target->code () == TYPE_CODE_VOID)
 	sz = 1;
       else
 	{
@@ -87,8 +88,8 @@ value_ptradd (struct value *arg1, LONGEST arg2)
   valptrtype = check_typedef (arg1->type ());
   sz = find_size_for_pointer_math (valptrtype);
 
-  result = value_from_pointer (valptrtype,
-			       value_as_address (arg1) + sz * arg2);
+  result = value_from_byte_pointer (valptrtype,
+				    value_as_byte_address (arg1) + sz * arg2);
   if (arg1->lval () != lval_internalvar)
     result->set_component_location (arg1);
   return result;
@@ -117,7 +118,9 @@ value_ptrdiff (struct value *arg1, struct value *arg2)
 	     "second argument is neither\n"
 	     "an integer nor a pointer of the same type."));
 
-  sz = type_length_units (check_typedef (type1->target_type ()));
+  /* In bytes rather than addressable memory units: a pointer can address
+     a byte inside a unit.  */
+  sz = check_typedef (type1->target_type ())->length ();
   if (sz == 0)
     {
       warning (_("Type size unknown, assuming 1. "
@@ -125,7 +128,9 @@ value_ptrdiff (struct value *arg1, struct value *arg2)
       sz = 1;
     }
 
-  return (value_as_long (arg1) - value_as_long (arg2)) / sz;
+  return ((LONGEST) (value_as_byte_address (arg1)
+		     - value_as_byte_address (arg2))
+	  / sz);
 }
 
 /* Return the value of ARRAY[IDX].
