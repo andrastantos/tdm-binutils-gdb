@@ -307,16 +307,18 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
       /* value_as_address does not return an address for an array when
 	 c_style_arrays is false, so we handle that specially
 	 here.  */
+      /* The address in bytes: where addressable memory units are bigger
+	 than a byte, the string can start inside a unit.  */
       CORE_ADDR addr;
       if (type->code () == TYPE_CODE_ARRAY)
 	{
 	  if (value->lval () != lval_memory)
 	    error (_("Attempt to take address of value "
 		     "not located in memory."));
-	  addr = value->address ();
+	  addr = value->byte_address ();
 	}
       else
-	addr = value_as_address (value);
+	addr = value_as_byte_address (value);
 
       /* Prior to the fix for PR 16196 read_string would ignore fetchlimit
 	 if length > 0.  The old "broken" behavior is the behavior we want:
@@ -333,10 +335,12 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
       if (*length > 0)
 	fetchlimit = UINT_MAX;
 
-      err = target_read_string (addr, *length, width, fetchlimit,
-				buffer, length);
+      err = target_read_string_bytes (addr, *length, width, fetchlimit,
+				      buffer, length);
       if (err != 0)
-	memory_error (TARGET_XFER_E_IO, addr);
+	memory_error (TARGET_XFER_E_IO,
+		      addr / gdbarch_addressable_memory_unit_size
+			       (type->arch ()));
     }
 
   /* If the LENGTH is specified at -1, we want to return the string

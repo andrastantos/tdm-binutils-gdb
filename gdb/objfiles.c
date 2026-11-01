@@ -351,6 +351,16 @@ add_separate_debug_objfile (struct objfile *objfile, struct objfile *parent)
 
 /* See objfiles.h.  */
 
+CORE_ADDR
+obj_section::size () const
+{
+  return (bfd_section_size (this->the_bfd_section)
+	  / bfd_octets_per_byte (this->objfile->obfd.get (),
+				 this->the_bfd_section));
+}
+
+/* See objfiles.h.  */
+
 objfile *
 objfile::make (gdb_bfd_ref_ptr bfd_, program_space *pspace, const char *name_,
 	       objfile_flags flags_, objfile *parent)

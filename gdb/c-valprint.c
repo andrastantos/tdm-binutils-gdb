@@ -174,7 +174,10 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
     {
       if (want_space)
 	gdb_puts (" ", stream);
-      val_print_string (unresolved_elttype, NULL, address, -1, stream, options);
+      val_print_string_bytes (unresolved_elttype, NULL,
+			      gdbarch_pointer_to_byte_address
+				(gdbarch, type, valaddr + embedded_offset),
+			      -1, stream, options);
     }
   else if (cp_is_vtbl_member (type))
     {

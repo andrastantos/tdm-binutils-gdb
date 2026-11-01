@@ -1659,6 +1659,21 @@ extern int target_read_raw_memory (CORE_ADDR memaddr, gdb_byte *myaddr,
 
 extern int target_read_stack (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len);
 
+/* Like target_read_memory, but ADDR and LEN count bytes rather than
+   addressable memory units, which can be bigger: read the units holding
+   the bytes.  */
+
+extern int target_read_memory_bytes (CORE_ADDR addr, gdb_byte *myaddr,
+				     ssize_t len);
+
+/* Like target_read_string, but ADDR is an address in bytes rather than
+   addressable memory units, which can be bigger.  */
+
+extern int target_read_string_bytes (CORE_ADDR addr, int len, int width,
+				     unsigned int fetchlimit,
+				     gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
+				     int *bytes_read);
+
 extern int target_read_code (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len);
 
 /* For target_write_memory see target/target.h.  */

@@ -81,6 +81,23 @@ static bool last_print_tags = false;
 static type *next_type;
 static CORE_ADDR next_address;
 
+/* Where addressable memory units are bigger than a byte, the offset in
+   bytes of the object to examine next inside the unit at
+   NEXT_ADDRESS.  */
+
+static int next_byte_offset;
+
+/* Set NEXT_ADDRESS and NEXT_BYTE_OFFSET to the byte address ADDR.  */
+
+static void
+set_next_byte_address (struct gdbarch *gdbarch, CORE_ADDR addr)
+{
+  int unit_size = gdbarch_addressable_memory_unit_size (gdbarch);
+
+  next_address = addr / unit_size;
+  next_byte_offset = addr % unit_size;
+}
+
 /* Number of delay instructions following current disassembled insn.  */
 
 static int branch_delay_insns;
@@ -291,11 +308,12 @@ print_formatted (struct value *val, int size,
 		 struct ui_file *stream)
 {
   struct type *type = check_typedef (val->type ());
-  /* Addresses count addressable units, which may be wider than a byte.  */
-  int len = type_length_units (type);
+  /* Addresses count addressable units, which may be wider than a byte:
+     the next object can start inside a unit.  */
+  int len = type->length ();
 
   if (val->lval () == lval_memory)
-    next_address = val->address () + len;
+    set_next_byte_address (type->arch (), val->byte_address () + len);
 
   if (size)
     {
@@ -305,10 +323,11 @@ print_formatted (struct value *val, int size,
 	  {
 	    struct type *elttype = val->type ();
 
-	    next_address = (val->address ()
-			    + val_print_string (elttype, NULL,
-						val->address (), -1,
-						stream, options) * len);
+	    set_next_byte_address
+	      (type->arch (),
+	       (val->byte_address ()
+		+ val_print_string_bytes (elttype, NULL, val->byte_address (),
+					  -1, stream, options) * len));
 	  }
 	  return;
 
@@ -319,6 +338,7 @@ print_formatted (struct value *val, int size,
 			  + gdb_print_insn (type->arch (),
 					    val->address (), stream,
 					    &branch_delay_insns));
+	  next_byte_offset = 0;
 	  return;
 	}
     }
@@ -1113,6 +1133,36 @@ format_to_type (format_data fmt, gdbarch *gdbarch, type_instance_flags flags)
   return val_type;
 }
 
+/* Print the address of the object at byte BYTE_OFFSET of the addressable
+   memory unit at ADDR, for "x": as print_address, followed by the byte
+   offset inside the unit, if any.  The offset from a symbol is then in
+   bytes.  */
+
+static void
+print_examine_address (struct gdbarch *gdbarch, CORE_ADDR addr,
+		       int byte_offset, struct ui_file *stream)
+{
+  if (byte_offset == 0)
+    {
+      print_address (gdbarch, addr, stream);
+      return;
+    }
+
+  int unit_size = gdbarch_addressable_memory_unit_size (gdbarch);
+  std::string name, filename;
+  int unmapped = 0, offset = 0, line = 0;
+
+  fputs_styled (paddress (gdbarch, addr), address_style.style (), stream);
+  gdb_printf (stream, "+%d", byte_offset);
+  if (build_address_symbolic (gdbarch, addr, asm_demangle, false, &name,
+			      &offset, &filename, &line, &unmapped))
+    return;
+  gdb_puts (unmapped ? " <*" : " <", stream);
+  fputs_styled (name.c_str (), function_name_style.style (), stream);
+  gdb_printf (stream, "%+d", offset * unit_size + byte_offset);
+  gdb_puts (unmapped ? "*>" : ">", stream);
+}
+
 /* Examine data at address NEXT_ADDRESS in format FMT.
    Fetch it from memory and print on gdb_stdout.  */
 
@@ -1240,7 +1290,8 @@ do_examine_next_address (struct format_data fmt)
 
       if (format == 'i')
 	gdb_puts (pc_prefix (next_address));
-      print_address (gdbarch, next_address, gdb_stdout);
+      print_examine_address (gdbarch, next_address, next_byte_offset,
+			     gdb_stdout);
       gdb_printf (":");
       for (int i = maxelts;
 	   i > 0 && count > 0;
@@ -1262,6 +1313,8 @@ do_examine_next_address (struct format_data fmt)
 	     object.  */
 	  last_examine_value
 	    = release_value (value_at_lazy (val_type, next_address));
+	  if (next_byte_offset != 0)
+	    last_examine_value->set_offset (next_byte_offset);
 
 	  print_formatted (last_examine_value.get (), size, &opts, gdb_stdout);
 
@@ -1935,9 +1988,13 @@ x_command (const char *exp, int from_tty)
 	val = coerce_ref (val);
       /* In rvalue contexts, such as this, functions are coerced into
 	 pointers to functions.  This makes "x/i main" work.  */
+      next_byte_offset = 0;
       if (val->type ()->code () == TYPE_CODE_FUNC
 	  && val->lval () == lval_memory)
 	next_address = val->address ();
+      else if (val->type ()->is_pointer_or_reference ())
+	set_next_byte_address (val->type ()->arch (),
+			       value_as_byte_address (val));
       else
 	next_address = value_as_address (val);
 
