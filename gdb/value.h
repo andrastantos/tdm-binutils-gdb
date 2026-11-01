@@ -1071,6 +1071,12 @@ extern bool is_floating_value (struct value *val);
 extern LONGEST value_as_long (struct value *val);
 extern CORE_ADDR value_as_address (struct value *val);
 
+/* Like value_as_address, but the address in bytes rather than
+   addressable memory units: a pointer can address a byte inside a unit
+   (see gdbarch_pointer_to_byte_address).  */
+
+extern CORE_ADDR value_as_byte_address (struct value *val);
+
 /* Extract the value from VAL as a MPZ.  This coerces arrays and
    handles various integer-like types as well.  */
 
