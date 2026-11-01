@@ -41,7 +41,17 @@ value_of_builtin_frame_fp_reg (const frame_info_ptr &frame, const void *baton)
 			      get_next_frame_sentinel_okay (frame));
   else
     {
+      /* Like the stack pointer, if that is a pointer: where it holds an
+	 address in different units than other data pointers, so does the
+	 frame base.  */
       struct type *data_ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
+      if (gdbarch_sp_regnum (gdbarch) >= 0)
+	{
+	  struct type *sp_type
+	    = register_type (gdbarch, gdbarch_sp_regnum (gdbarch));
+	  if (sp_type->code () == TYPE_CODE_PTR)
+	    data_ptr_type = sp_type;
+	}
       struct value *val = value::allocate (data_ptr_type);
       gdb_byte *buf = val->contents_raw ().data ();
 
