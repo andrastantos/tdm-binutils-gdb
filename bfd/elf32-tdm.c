@@ -29,6 +29,19 @@
 #include "elf-bfd.h"
 #include "elf/tdm.h"
 
+/* Whether VALUE, a byte pointer computed with its full width, doesn't
+   fit R_TDM_BYTEPTR16.  A pointer past the 64K octets it can address
+   is an error: the object is out of reach.  One below zero wraps
+   around instead, as address arithmetic does at run time: the compiler
+   may bias the address of an object by a negative offset larger than
+   the address, for accesses that add the offset back.  */
+
+static bool
+tdm_elf_byteptr_overflow_p (bfd_vma value)
+{
+  return value > 0xffff && (bfd_signed_vma) value >= 0;
+}
+
 /* Apply R_TDM_BYTEPTR16 outside the linker (which handles it in
    tdm_elf_relocate_section): the value is twice the word address of
    the symbol, plus the addend in octets.  */
@@ -57,7 +70,8 @@ tdm_elf_byteptr_reloc (bfd *abfd, arelent *reloc_entry, asymbol *symbol,
 	       + symbol->section->output_offset)
 	  + reloc_entry->addend;
   bfd_put_16 (abfd, value & 0xffff, (bfd_byte *) data + octets);
-  return value > 0xffff ? bfd_reloc_overflow : bfd_reloc_ok;
+  return (tdm_elf_byteptr_overflow_p (value)
+	  ? bfd_reloc_overflow : bfd_reloc_ok);
 }
 
 static reloc_howto_type tdm_elf_howto_table[] =
@@ -316,7 +330,8 @@ tdm_elf_relocate_section (bfd *output_bfd,
 	{
 	  /* Twice the word address, plus the addend in octets.  The
 	     generic overflow check masks the value to the 16-bit address
-	     width first, which would hide pointers past 32K words.  */
+	     width first, which would hide pointers past 32K words (and
+	     would reject those that wrap around below zero).  */
 	  bfd_size_type octets
 	    = rel->r_offset * bfd_octets_per_byte (input_bfd, input_section);
 	  bfd_vma value = 2 * relocation + rel->r_addend;
@@ -327,7 +342,8 @@ tdm_elf_relocate_section (bfd *output_bfd,
 	  else
 	    {
 	      bfd_put_16 (input_bfd, value & 0xffff, contents + octets);
-	      r = value > 0xffff ? bfd_reloc_overflow : bfd_reloc_ok;
+	      r = (tdm_elf_byteptr_overflow_p (value)
+		   ? bfd_reloc_overflow : bfd_reloc_ok);
 	    }
 	}
       else
