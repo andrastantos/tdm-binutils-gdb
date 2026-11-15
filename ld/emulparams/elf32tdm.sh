@@ -2,6 +2,7 @@
 # sizes in the linker script are in 16-bit units.
 SCRIPT_NAME=elf
 TEMPLATE_NAME=elf
+EXTRA_EM_FILE=tdmelf
 OUTPUT_FORMAT="elf32-tdm"
 # MEM[0] and MEM[1] are the reset and interrupt vectors, MEM[2] is a
 # scratch location by convention.
