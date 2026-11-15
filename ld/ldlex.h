@@ -282,6 +282,8 @@ enum option_values
   /* Used by emultempl/cskyelf.em.  */
   OPTION_BRANCH_STUB,
   OPTION_NO_BRANCH_STUB,
+  /* Used by emultempl/tdmelf.em.  */
+  OPTION_TDM_STACK_ROOM,
   /* Used by emultempl/elf.em.  */
   OPTION_DISABLE_NEW_DTAGS,
   OPTION_ENABLE_NEW_DTAGS,
